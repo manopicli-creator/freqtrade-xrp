@@ -1,15 +1,15 @@
-FROM python:3.11-slim
+FROM freqtradeorg/freqtrade:stable
 
-WORKDIR /app
+USER root
+RUN pip install flask flask-cors requests
 
-RUN pip install freqtrade flask flask-cors requests
+WORKDIR /freqtrade
 
 COPY config.json .
 COPY server.py .
 COPY start.sh .
 COPY user_data/strategies/XRPStrategy.py user_data/strategies/
 
-RUN mkdir -p user_data/data user_data/logs
 RUN chmod +x start.sh
 
 CMD ["bash", "start.sh"]
