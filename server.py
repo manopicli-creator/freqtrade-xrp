@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import re
 import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -33,12 +34,12 @@ def update_strategy():
         content = f.read()
 
     content = re.sub(r'stoploss = -[\d.]+', f'stoploss = -{stoploss}', content)
-    content = re.sub(r"'0': [\d.]+", f"'0': {roi}", content)
+    content = re.sub(r"\"0\": [\d.]+", f'"0": {roi}', content)
 
     with open(STRATEGY_FILE, 'w') as f:
         f.write(content)
 
-    return jsonify({"status": "success", "message": f"Strategy updated! RSI entry={rsi_entry}, RSI exit={rsi_exit}, stoploss=-{stoploss}, ROI={roi}"})
+    return jsonify({"status": "success", "message": "Strategy updated!"})
 
 if __name__ == '__main__':
-app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
