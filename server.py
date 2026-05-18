@@ -9,8 +9,7 @@ CORS(app, origins="*")
 CORS(app)
 
 STRATEGY_FILE = "user_data/strategies/XRPStrategy.py"
-FREQTRADE_URL = "http://127.0.0.1:8080"
-
+FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://127.0.0.1:8080')
 @app.route('/api/v1/<path:path>', methods=['GET', 'POST', 'DELETE'])
 def proxy(path):
     url = f"{FREQTRADE_URL}/api/v1/{path}"
