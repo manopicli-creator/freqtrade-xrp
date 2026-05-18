@@ -41,4 +41,4 @@ def update_strategy():
     return jsonify({"status": "success", "message": f"Strategy updated! RSI entry={rsi_entry}, RSI exit={rsi_exit}, stoploss=-{stoploss}, ROI={roi}"})
 
 if __name__ == '__main__':
-    app.run(port=5000)
+app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
