@@ -5,6 +5,7 @@ import requests
 import os
 
 app = Flask(__name__)
+CORS(app, origins="*")
 CORS(app)
 
 STRATEGY_FILE = "user_data/strategies/XRPStrategy.py"
