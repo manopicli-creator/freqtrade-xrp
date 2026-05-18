@@ -1,0 +1,7 @@
+FROM freqtradeorg/freqtrade:stable
+
+COPY config.json /freqtrade/config.json
+COPY user_data/strategies/XRPStrategy.py /freqtrade/user_data/strategies/XRPStrategy.py
+COPY server.py /freqtrade/server.py
+
+CMD ["trade", "--strategy", "XRPStrategy", "--logfile", "/freqtrade/user_data/logs/freqtrade.log"]
