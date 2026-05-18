@@ -6,8 +6,10 @@ RUN pip install freqtrade flask flask-cors requests
 
 COPY config.json .
 COPY server.py .
+COPY start.sh .
 COPY user_data/strategies/XRPStrategy.py user_data/strategies/
 
 RUN mkdir -p user_data/data user_data/logs
+RUN chmod +x start.sh
 
-CMD ["python", "server.py"]
+CMD ["bash", "start.sh"]
