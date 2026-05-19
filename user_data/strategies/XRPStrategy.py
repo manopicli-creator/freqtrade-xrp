@@ -1,4 +1,4 @@
-from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter
+from freqtrade.strategy import IStrategy, IntParameter
 from pandas import DataFrame
 import talib.abstract as ta
 
@@ -20,66 +20,36 @@ class XRPStrategy(IStrategy):
     trailing_stop_positive_offset = 0.015
     trailing_only_offset_is_reached = True
 
-    # Paramètres optimisables
-    buy_rsi_min = IntParameter(30, 55, default=40, space='buy')
-    buy_rsi_max = IntParameter(50, 70, default=60, space='buy')
-    sell_rsi = IntParameter(60, 85, default=70, space='sell')
-    buy_bb_lower = DecimalParameter(0.95, 1.0, default=0.99, space='buy')
+    buy_rsi_min = IntParameter(25, 50, default=35, space='buy')
+    buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
+    sell_rsi = IntParameter(60, 85, default=72, space='sell')
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # RSI
         dataframe['rsi'] = ta.RSI(dataframe, timeperiod=14)
-
-        # EMA
-        dataframe['ema9'] = ta.EMA(dataframe, timeperiod=9)
-        dataframe['ema21'] = ta.EMA(dataframe, timeperiod=21)
+        dataframe['ema20'] = ta.EMA(dataframe, timeperiod=20)
         dataframe['ema50'] = ta.EMA(dataframe, timeperiod=50)
 
-        # MACD
         macd = ta.MACD(dataframe, fastperiod=12, slowperiod=26, signalperiod=9)
         dataframe['macd'] = macd['macd']
         dataframe['macdsignal'] = macd['macdsignal']
-        dataframe['macdhist'] = macd['macdhist']
 
-        # Bollinger Bands
         bollinger = ta.BBANDS(dataframe, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
         dataframe['bb_upper'] = bollinger['upperband']
-        dataframe['bb_mid'] = bollinger['middleband']
         dataframe['bb_lower'] = bollinger['lowerband']
+        dataframe['bb_mid'] = bollinger['middleband']
 
-        # Volume moyen
         dataframe['volume_mean'] = dataframe['volume'].rolling(20).mean()
-
-        # Stochastic RSI
-        stochrsi = ta.STOCHRSI(dataframe, timeperiod=14, fastk_period=3, fastd_period=3)
-        dataframe['fastk'] = stochrsi['fastk'].astype(float)
-        dataframe['fastd'] = stochrsi['fastd'].astype(float)
 
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # RSI en zone neutre-haussière
                 (dataframe['rsi'] > self.buy_rsi_min.value) &
                 (dataframe['rsi'] < self.buy_rsi_max.value) &
-
-                # Tendance haussière : EMA9 > EMA21 > EMA50
-                (dataframe['ema9'] > dataframe['ema21']) &
-                (dataframe['ema21'] > dataframe['ema50']) &
-
-                # MACD haussier
+                (dataframe['ema20'] > dataframe['ema50']) &
                 (dataframe['macd'] > dataframe['macdsignal']) &
-                (dataframe['macdhist'] > 0) &
-
-                # Prix proche ou sous la BB mid (bon point d'entrée)
-                (dataframe['close'] < dataframe['bb_mid'] * self.buy_bb_lower.value) &
-
-                # Volume au dessus de la moyenne (confirmation)
-                (dataframe['volume'] > dataframe['volume_mean'] * 0.8) &
-
-                # Stoch RSI pas encore suracheté
-                (dataframe['fastk'] < 80)
+                (dataframe['volume'] > 0)
             ),
             'enter_long'] = 1
         return dataframe
@@ -87,17 +57,9 @@ class XRPStrategy(IStrategy):
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # RSI suracheté
                 (dataframe['rsi'] > self.sell_rsi.value) |
-
-                # MACD croisement baissier
-                (
-                    (dataframe['macd'] < dataframe['macdsignal']) &
-                    (dataframe['macdhist'] < 0)
-                ) |
-
-                # Prix au dessus de la BB upper (surachat)
-                (dataframe['close'] > dataframe['bb_upper'])
+                (dataframe['close'] > dataframe['bb_upper']) |
+                (dataframe['macd'] < dataframe['macdsignal'])
             ),
             'exit_long'] = 1
         return dataframe
