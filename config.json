@@ -39,7 +39,7 @@
         "secret": "",
         "ccxt_config": {},
         "ccxt_async_config": {},
-        "pair_whitelist": ["XRP/USDT"],
+        "pair_whitelist": ["XRP/USDT", "BTC/USDT", "ETH/USDT", "SOL/USDT"],
         "pair_blacklist": [
 
         ]
