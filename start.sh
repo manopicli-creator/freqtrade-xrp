@@ -10,7 +10,7 @@ freqtrade download-data \
   --pairs XRP/USDT \
   --exchange binance \
   --timeframe 15m \
-  --days 120 || echo "Download failed, continuing anyway..."
+  --days 240 || echo "Download failed, continuing anyway..."
 
 echo "=== Running backtest ==="
 freqtrade backtesting \
