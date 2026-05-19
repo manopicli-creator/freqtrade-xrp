@@ -7,21 +7,21 @@ class XRPStrategy(IStrategy):
     INTERFACE_VERSION = 3
     timeframe = '15m'
 
-    stoploss = -0.04
+    stoploss = -0.06
     minimal_roi = {
         "0": 0.03,
         "60": 0.02,
-        "120": 0.01,
-        "240": 0
+        "180": 0.01,
+        "360": 0
     }
 
     trailing_stop = True
-    trailing_stop_positive = 0.015
-    trailing_stop_positive_offset = 0.02
+    trailing_stop_positive = 0.02
+    trailing_stop_positive_offset = 0.03
     trailing_only_offset_is_reached = True
 
-    buy_rsi_min = IntParameter(30, 50, default=40, space='buy')
-    buy_rsi_max = IntParameter(50, 70, default=60, space='buy')
+    buy_rsi_min = IntParameter(30, 50, default=38, space='buy')
+    buy_rsi_max = IntParameter(50, 70, default=62, space='buy')
     sell_rsi = IntParameter(65, 85, default=75, space='sell')
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -40,10 +40,16 @@ class XRPStrategy(IStrategy):
         dataframe['bb_lower'] = bollinger['lowerband']
         dataframe['bb_mid'] = bollinger['middleband']
 
-        # Détecter croisement MACD haussier (1 seule bougie)
+        # Croisement MACD haussier
         dataframe['macd_cross_up'] = (
             (dataframe['macd'] > dataframe['macdsignal']) &
             (dataframe['macd'].shift(1) <= dataframe['macdsignal'].shift(1))
+        )
+
+        # RSI croisement haussier depuis zone oversold
+        dataframe['rsi_cross_up'] = (
+            (dataframe['rsi'] > 35) &
+            (dataframe['rsi'].shift(1) <= 35)
         )
 
         return dataframe
@@ -51,18 +57,20 @@ class XRPStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # RSI zone neutre
+                # RSI zone neutre-haussière
                 (dataframe['rsi'] > self.buy_rsi_min.value) &
                 (dataframe['rsi'] < self.buy_rsi_max.value) &
 
-                # Tendance haussière confirmée
+                # Tendance haussière : EMA20 > EMA50
                 (dataframe['ema20'] > dataframe['ema50']) &
+
+                # Prix au dessus EMA200 (marché haussier)
                 (dataframe['close'] > dataframe['ema200']) &
 
-                # Croisement MACD haussier (signal précis)
-                (dataframe['macd_cross_up'] == True) &
+                # Croisement MACD haussier OU RSI remonte de zone oversold
+                (dataframe['macd_cross_up'] | dataframe['rsi_cross_up']) &
 
-                # Prix pas trop loin de la BB mid
+                # Prix dans les BB (pas suracheté)
                 (dataframe['close'] < dataframe['bb_upper']) &
 
                 (dataframe['volume'] > 0)
@@ -76,8 +84,8 @@ class XRPStrategy(IStrategy):
                 # RSI suracheté
                 (dataframe['rsi'] > self.sell_rsi.value) |
 
-                # Prix au dessus BB upper
-                (dataframe['close'] > dataframe['bb_upper'] * 1.01)
+                # Prix dépasse BB upper
+                (dataframe['close'] > dataframe['bb_upper'])
             ),
             'exit_long'] = 1
         return dataframe
