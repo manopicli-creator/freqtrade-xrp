@@ -9,7 +9,7 @@ echo "=== Downloading data for backtest ==="
 freqtrade download-data \
   --pairs XRP/USDT \
   --exchange binance \
-  --timeframe 5m \
+  --timeframe 15m \
   --days 30 || echo "Download failed, continuing anyway..."
 
 echo "=== Running backtest ==="
