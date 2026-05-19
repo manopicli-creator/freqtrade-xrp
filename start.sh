@@ -2,12 +2,8 @@
 echo "=== Starting setup ==="
 mkdir -p user_data/data user_data/logs user_data/strategies
 
-echo "=== Downloading data ==="
-freqtrade download-data \
-  --pairs XRP/USDT \
-  --exchange kraken \
-  --timeframe 5m \
-  --days 7 || echo "Download failed, continuing anyway..."
+echo "=== Copying config ==="
+cp config.json user_data/config.json 2>/dev/null || echo "config already in place"
 
 echo "=== Starting Freqtrade ==="
 freqtrade trade \
