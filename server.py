@@ -5,6 +5,16 @@ import requests
 import os
 
 app = Flask(__name__)
+@app.route('/')
+def index():
+    return '''
+    <html><body style="background:#1a1a2e;color:white;font-family:Arial;text-align:center;padding:50px">
+    <h1>🤖 Freqtrade XRP Bot</h1>
+    <p>Bot status: <b style="color:#00ff88">RUNNING</b></p>
+    <a href="/api/v1/ping" style="color:#00aaff">API Ping</a> | 
+    <a href="/api/v1/status" style="color:#00aaff">Trades Status</a>
+    </body></html>
+    '''
 CORS(app, origins="*")
 CORS(app)
 
