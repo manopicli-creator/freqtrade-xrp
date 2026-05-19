@@ -7,7 +7,7 @@ cp config.json user_data/config.json 2>/dev/null || echo "config already in plac
 
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
-  --pairs XRP/USDT \
+  --pairs XRP/USDT BTC/USDT ETH/USDT SOL/USDT \
   --exchange binance \
   --timeframe 15m \
   --days 240 || echo "Download failed, continuing anyway..."
