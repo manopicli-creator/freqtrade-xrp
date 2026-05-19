@@ -5,6 +5,13 @@ mkdir -p user_data/data user_data/logs user_data/strategies
 echo "=== Copying config ==="
 cp config.json user_data/config.json 2>/dev/null || echo "config already in place"
 
+echo "=== Downloading data for backtest ==="
+freqtrade download-data \
+  --pairs XRP/USDT \
+  --exchange binance \
+  --timeframe 5m \
+  --days 30 || echo "Download failed, continuing anyway..."
+
 echo "=== Starting Freqtrade ==="
 freqtrade trade \
   --strategy XRPStrategy \
