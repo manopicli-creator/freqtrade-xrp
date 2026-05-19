@@ -17,6 +17,7 @@ freqtrade backtesting \
   --strategy XRPStrategy \
   --config user_data/config.json \
   --datadir user_data/data/binance \
+  --pairs XRP/USDT BTC/USDT ETH/USDT SOL/USDT \
   --timerange 20251001-20260101 || echo "Backtest failed, continuing anyway..."
 
 echo "=== Starting Freqtrade ==="
