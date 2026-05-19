@@ -51,9 +51,9 @@ class XRPStrategy(IStrategy):
         dataframe['volume_mean'] = dataframe['volume'].rolling(20).mean()
 
         # Stochastic RSI
-        dataframe['fastk'], dataframe['fastd'] = ta.STOCHRSI(
-            dataframe, timeperiod=14, fastk_period=3, fastd_period=3
-        )
+        stochrsi = ta.STOCHRSI(dataframe, timeperiod=14, fastk_period=3, fastd_period=3)
+        dataframe['fastk'] = stochrsi['fastk'].astype(float)
+        dataframe['fastd'] = stochrsi['fastd'].astype(float)
 
         return dataframe
 
