@@ -20,7 +20,7 @@ class XRPStrategy(IStrategy):
     trailing_stop_positive_offset = 0.03
     trailing_only_offset_is_reached = True
 
-    use_exit_signal = False  # Laisser ROI et trailing stop gérer les sorties
+    use_exit_signal = False
 
     buy_rsi_min = IntParameter(30, 50, default=38, space='buy')
     buy_rsi_max = IntParameter(50, 70, default=62, space='buy')
@@ -38,23 +38,25 @@ class XRPStrategy(IStrategy):
         bollinger = ta.BBANDS(dataframe, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
         dataframe['bb_upper'] = bollinger['upperband']
         dataframe['bb_lower'] = bollinger['lowerband']
-        dataframe['bb_mid'] = bollinger['middleband']
 
-        # Croisement MACD haussier
         dataframe['macd_cross_up'] = (
             (dataframe['macd'] > dataframe['macdsignal']) &
             (dataframe['macd'].shift(1) <= dataframe['macdsignal'].shift(1))
         )
+
+        # Filtre tendance macro (équivalent EMA200 sur 1h)
+        dataframe['ema200_1h'] = ta.EMA(dataframe, timeperiod=800)
 
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                (dataframe['rsi'] > self.buy_rsi_min.value) &
-                (dataframe['rsi'] < self.buy_rsi_max.value) &
+                (dataframe['close'] > dataframe['ema200_1h']) &
                 (dataframe['ema20'] > dataframe['ema50']) &
                 (dataframe['close'] > dataframe['ema200']) &
+                (dataframe['rsi'] > self.buy_rsi_min.value) &
+                (dataframe['rsi'] < self.buy_rsi_max.value) &
                 (dataframe['macd_cross_up'] == True) &
                 (dataframe['close'] < dataframe['bb_upper']) &
                 (dataframe['volume'] > 0)
