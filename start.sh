@@ -10,14 +10,14 @@ freqtrade download-data \
   --pairs XRP/USDT \
   --exchange binance \
   --timeframe 15m \
-  --days 30 || echo "Download failed, continuing anyway..."
+  --days 120 || echo "Download failed, continuing anyway..."
 
 echo "=== Running backtest ==="
 freqtrade backtesting \
   --strategy XRPStrategy \
   --config user_data/config.json \
   --datadir user_data/data/binance \
-  --timerange 20260419-20260519 || echo "Backtest failed, continuing anyway..."
+  --timerange 20260101-20260401 || echo "Backtest failed, continuing anyway..."
 
 echo "=== Starting Freqtrade ==="
 freqtrade trade \
