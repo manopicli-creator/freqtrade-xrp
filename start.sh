@@ -16,7 +16,7 @@ freqtrade download-data \
     APT/USDT SUI/USDT ARB/USDT OP/USDT \
     INJ/USDT SEI/USDT TIA/USDT WIF/USDT \
     PEPE/USDT BONK/USDT FET/USDT RENDER/USDT \
-  --timeframe 15m \
+  --timeframes 15m 5m \
   --days 240
 
 echo "=== Running backtest ==="
@@ -32,7 +32,6 @@ freqtrade trade \
   --strategy XRPStrategy \
   --config user_data/config.json \
   --logfile user_data/logs/freqtrade.log &
-
 FTPID=$!
 echo "Freqtrade PID: $FTPID"
 
