@@ -41,17 +41,46 @@ def proxy(path):
 @app.route('/update_strategy', methods=['POST'])
 def update_strategy():
     data = request.json
-    rsi_entry = float(data.get('rsi_entry', 55))
-    rsi_exit = float(data.get('rsi_exit', 72))
-    stoploss = abs(float(data.get('stoploss', 3))) / 100
-    roi = abs(float(data.get('roi', 1))) / 100
+    rsi_entry = float(data.get('rsi_entry', 38))
+    rsi_exit = float(data.get('rsi_exit', 62))
+    stoploss = abs(float(data.get('stoploss', 5))) / 100
+    roi = abs(float(data.get('roi', 4))) / 100
+
     with open(STRATEGY_FILE, 'r') as f:
         content = f.read()
+
+    # Stoploss
     content = re.sub(r'stoploss = -[\d.]+', f'stoploss = -{stoploss}', content)
+    # ROI
     content = re.sub(r'"0": [\d.]+', f'"0": {roi}', content)
+    # RSI entry
+    content = re.sub(
+        r'buy_rsi_min = IntParameter\(30, 50, default=\d+',
+        f'buy_rsi_min = IntParameter(30, 50, default={int(rsi_entry)}',
+        content
+    )
+    # RSI exit
+    content = re.sub(
+        r'buy_rsi_max = IntParameter\(50, 70, default=\d+',
+        f'buy_rsi_max = IntParameter(50, 70, default={int(rsi_exit)}',
+        content
+    )
+
     with open(STRATEGY_FILE, 'w') as f:
         f.write(content)
-    return jsonify({"status": "success", "message": "Strategy updated!"})
+
+    # Recharge la stratégie sans redémarrer le bot
+    try:
+        auth = request.headers.get("Authorization")
+        requests.post(
+            f"{FREQTRADE_URL}/api/v1/reload_config",
+            headers={"Authorization": auth},
+            timeout=10
+        )
+    except Exception:
+        pass
+
+    return jsonify({"status": "success", "message": "Strategy updated and reloaded!"})
 
 if __name__ == '__main__':
     import logging
