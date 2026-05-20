@@ -9,13 +9,11 @@ echo "=== Downloading data for backtest ==="
 freqtrade download-data \
   --exchange binance \
   --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
-    BNB/USDT ADA/USDT DOGE/USDT TRX/USDT \
-    AVAX/USDT LINK/USDT DOT/USDT MATIC/USDT \
-    LTC/USDT BCH/USDT UNI/USDT ATOM/USDT \
-    XLM/USDT ETC/USDT FIL/USDT NEAR/USDT \
-    APT/USDT SUI/USDT ARB/USDT OP/USDT \
-    INJ/USDT SEI/USDT TIA/USDT WIF/USDT \
-    PEPE/USDT BONK/USDT FET/USDT RENDER/USDT \
+    BNB/USDT ADA/USDT DOGE/USDT AVAX/USDT \
+    LINK/USDT DOT/USDT LTC/USDT BCH/USDT \
+    ATOM/USDT UNI/USDT NEAR/USDT APT/USDT \
+    SUI/USDT ARB/USDT OP/USDT INJ/USDT \
+    PEPE/USDT FET/USDT RENDER/USDT TRX/USDT \
   --timeframes 15m 5m \
   --days 240
 
@@ -24,7 +22,7 @@ freqtrade backtesting \
   --strategy XRPStrategy \
   --config user_data/config.json \
   --datadir user_data/data/binance \
-  --pairs XRP/USDT BTC/USDT ETH/USDT SOL/USDT \
+  --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
   --timerange 20251001-20260101 || echo "Backtest failed, continuing anyway..."
 
 echo "=== Starting Freqtrade ==="
