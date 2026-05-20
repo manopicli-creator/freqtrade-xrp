@@ -7,10 +7,17 @@ cp config.json user_data/config.json 2>/dev/null || echo "config already in plac
 
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
-  --pairs XRP/USDT BTC/USDT ETH/USDT SOL/USDT \
   --exchange binance \
+  --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
+    BNB/USDT ADA/USDT DOGE/USDT TRX/USDT \
+    AVAX/USDT LINK/USDT DOT/USDT MATIC/USDT \
+    LTC/USDT BCH/USDT UNI/USDT ATOM/USDT \
+    XLM/USDT ETC/USDT FIL/USDT NEAR/USDT \
+    APT/USDT SUI/USDT ARB/USDT OP/USDT \
+    INJ/USDT SEI/USDT TIA/USDT WIF/USDT \
+    PEPE/USDT BONK/USDT FET/USDT RENDER/USDT \
   --timeframe 15m \
-  --days 240 || echo "Download failed, continuing anyway..."
+  --days 240
 
 echo "=== Running backtest ==="
 freqtrade backtesting \
