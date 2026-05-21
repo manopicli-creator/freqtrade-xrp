@@ -27,7 +27,7 @@ freqtrade hyperopt \
   --spaces buy roi stoploss \
   --epochs 200 \
   --job-workers 1 \
-  --timerange 20251001-20260501 \
+  --timerange 20251001-20260520 \
   --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
     DOGE/USDT ADA/USDT TRX/USDT \
   || echo "Hyperopt failed, continuing anyway..."
