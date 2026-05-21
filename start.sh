@@ -12,7 +12,7 @@ freqtrade download-data \
     DOGE/USDT ADA/USDT TRX/USDT AVAX/USDT LINK/USDT \
     DOT/USDT SHIB/USDT SUI/USDT BCH/USDT LTC/USDT \
     NEAR/USDT APT/USDT UNI/USDT PEPE/USDT OP/USDT \
-  --timeframes 15m 5m \
+  --timeframes 15m 5m 1h \
   --days 240
 
 echo "=== Running backtest ==="
