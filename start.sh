@@ -24,7 +24,7 @@ freqtrade backtesting \
     DOGE/USDT ADA/USDT TRX/USDT AVAX/USDT LINK/USDT \
     DOT/USDT SHIB/USDT SUI/USDT BCH/USDT LTC/USDT \
     NEAR/USDT APT/USDT UNI/USDT PEPE/USDT OP/USDT \
-  --timerange 20251001-20260101 || echo "Backtest failed, continuing anyway..."
+  --timerange 20260101-20260520 || echo "Backtest failed, continuing anyway..."
 
 echo "=== Starting Freqtrade ==="
 freqtrade trade \
