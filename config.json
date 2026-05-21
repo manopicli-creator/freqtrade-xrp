@@ -30,17 +30,34 @@
     "download_trades": false,
     "exchange": {
         "name": "binance",
-        "pair_whitelist": [
-            "BTC/USDT", "ETH/USDT", "XRP/USDT", "BNB/USDT", "SOL/USDT",
-            "DOGE/USDT", "ADA/USDT", "TRX/USDT", "AVAX/USDT", "LINK/USDT",
-            "DOT/USDT", "SHIB/USDT", "SUI/USDT", "BCH/USDT", "LTC/USDT",
-            "NEAR/USDT", "APT/USDT", "UNI/USDT", "PEPE/USDT", "OP/USDT"
-        ],
-        "pair_blacklist": []
+        "pair_whitelist": [],
+        "pair_blacklist": [
+            "BNB/USDT",
+            ".*UP/USDT",
+            ".*DOWN/USDT",
+            ".*BEAR/USDT",
+            ".*BULL/USDT"
+        ]
     },
     "pairlists": [
         {
-            "method": "StaticPairList"
+            "method": "VolumePairList",
+            "number_assets": 40,
+            "sort_key": "quoteVolume",
+            "min_value": 0,
+            "refresh_period": 1800
+        },
+        {
+            "method": "AgeFilter",
+            "min_days_listed": 30
+        },
+        {
+            "method": "PriceFilter",
+            "low_price_ratio": 0.01
+        },
+        {
+            "method": "SpreadFilter",
+            "max_spread_ratio": 0.005
         }
     ],
     "telegram": {
