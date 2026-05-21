@@ -7,12 +7,13 @@ class XRPStrategy(IStrategy):
     timeframe = '15m'
     startup_candle_count = 800
 
-    stoploss = -0.05
-    minimal_roi = {
-        "0": 0.04,
-        "120": 0.02,
-        "240": 0.01,
-        "480": 0
+    stoploss = -0.03
+
+minimal_roi = {
+    "0": 0.03,
+    "60": 0.02,
+    "120": 0.01,
+    "240": 0
     }
 
     trailing_stop = True
