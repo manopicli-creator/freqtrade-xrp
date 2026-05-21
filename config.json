@@ -1,7 +1,7 @@
 {
     "$schema": "https://schema.freqtrade.io/schema.json",
     "max_open_trades": 10,
-    "stake_currency": "USD",
+    "stake_currency": "USDT",
     "stake_amount": 100,
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
@@ -29,14 +29,12 @@
     },
     "download_trades": false,
     "exchange": {
-        "name": "kraken",
+        "name": "binance",
         "pair_whitelist": [
-            "BTC/USD", "ETH/USD", "XRP/USD", "SOL/USD",
-            "BNB/USD", "ADA/USD", "DOGE/USD", "AVAX/USD",
-            "LINK/USD", "DOT/USD", "LTC/USD", "BCH/USD",
-            "ATOM/USD", "UNI/USD", "NEAR/USD", "APT/USD",
-            "SUI/USD", "ARB/USD", "OP/USD", "INJ/USD",
-            "PEPE/USD", "FET/USD", "RENDER/USD", "TRX/USD"
+            "BTC/USDT", "ETH/USDT", "XRP/USDT", "BNB/USDT", "SOL/USDT",
+            "DOGE/USDT", "ADA/USDT", "TRX/USDT", "AVAX/USDT", "LINK/USDT",
+            "DOT/USDT", "SHIB/USDT", "SUI/USDT", "BCH/USDT", "LTC/USDT",
+            "NEAR/USDT", "APT/USDT", "UNI/USDT", "PEPE/USDT", "OP/USDT"
         ],
         "pair_blacklist": []
     },
