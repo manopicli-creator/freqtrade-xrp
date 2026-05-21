@@ -24,13 +24,12 @@ freqtrade hyperopt \
   --config user_data/config.json \
   --datadir user_data/data/binance \
   --hyperopt-loss SharpeHyperOptLoss \
-  --spaces buy exit roi stoploss \
-  --epochs 500 \
+  --spaces buy roi stoploss \
+  --epochs 200 \
+  --jobs 1 \
   --timerange 20251001-20260501 \
   --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
-    DOGE/USDT ADA/USDT TRX/USDT AVAX/USDT LINK/USDT \
-    DOT/USDT SHIB/USDT SUI/USDT BCH/USDT LTC/USDT \
-    NEAR/USDT APT/USDT UNI/USDT PEPE/USDT OP/USDT \
+    DOGE/USDT ADA/USDT TRX/USDT \
   || echo "Hyperopt failed, continuing anyway..."
 
 echo "=== Starting Freqtrade ==="
