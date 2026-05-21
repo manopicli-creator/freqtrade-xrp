@@ -6,7 +6,7 @@ echo "=== Copying config ==="
 cp config.json user_data/config.json 2>/dev/null || echo "config already in place"
 
 echo "=== Installing hyperopt dependencies ==="
-pip install filelock scikit-learn joblib progressbar2 --quiet
+pip install filelock scikit-learn joblib progressbar2 optuna --quiet
 
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
