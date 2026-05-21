@@ -8,12 +8,10 @@ cp config.json user_data/config.json 2>/dev/null || echo "config already in plac
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
   --exchange binance \
-  --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
-    BNB/USDT ADA/USDT DOGE/USDT AVAX/USDT \
-    LINK/USDT DOT/USDT LTC/USDT BCH/USDT \
-    ATOM/USDT UNI/USDT NEAR/USDT APT/USDT \
-    SUI/USDT ARB/USDT OP/USDT INJ/USDT \
-    PEPE/USDT FET/USDT RENDER/USDT TRX/USDT \
+  --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
+    DOGE/USDT ADA/USDT TRX/USDT AVAX/USDT LINK/USDT \
+    DOT/USDT SHIB/USDT SUI/USDT BCH/USDT LTC/USDT \
+    NEAR/USDT APT/USDT UNI/USDT PEPE/USDT OP/USDT \
   --timeframes 15m 5m \
   --days 240
 
@@ -22,7 +20,10 @@ freqtrade backtesting \
   --strategy XRPStrategy \
   --config user_data/config.json \
   --datadir user_data/data/binance \
-  --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
+  --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
+    DOGE/USDT ADA/USDT TRX/USDT AVAX/USDT LINK/USDT \
+    DOT/USDT SHIB/USDT SUI/USDT BCH/USDT LTC/USDT \
+    NEAR/USDT APT/USDT UNI/USDT PEPE/USDT OP/USDT \
   --timerange 20251001-20260101 || echo "Backtest failed, continuing anyway..."
 
 echo "=== Starting Freqtrade ==="
