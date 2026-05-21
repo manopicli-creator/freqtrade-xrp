@@ -1,6 +1,7 @@
 from freqtrade.strategy import IStrategy, IntParameter
 from pandas import DataFrame
 import talib.abstract as ta
+import pandas as pd
 
 class XRPStrategy(IStrategy):
     INTERFACE_VERSION = 3
@@ -71,13 +72,18 @@ class XRPStrategy(IStrategy):
 
         # --- Indicateurs 1h ---
         inf1h = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='1h')
-        inf1h['ema20_1h'] = ta.EMA(inf1h, timeperiod=20)
-        inf1h['ema50_1h'] = ta.EMA(inf1h, timeperiod=50)
-        inf1h['rsi_1h'] = ta.RSI(inf1h, timeperiod=14)
-
-        inf1h_15 = inf1h[['date', 'ema20_1h', 'ema50_1h', 'rsi_1h']].copy()
-        inf1h_15['date'] = inf1h_15['date'].dt.floor('15min')
-        dataframe = dataframe.merge(inf1h_15, on='date', how='left')
+        if len(inf1h) > 0:
+            inf1h['ema20_1h'] = ta.EMA(inf1h, timeperiod=20)
+            inf1h['ema50_1h'] = ta.EMA(inf1h, timeperiod=50)
+            inf1h['rsi_1h'] = ta.RSI(inf1h, timeperiod=14)
+            inf1h['date'] = pd.to_datetime(inf1h['date'])
+            inf1h_15 = inf1h[['date', 'ema20_1h', 'ema50_1h', 'rsi_1h']].copy()
+            inf1h_15['date'] = inf1h_15['date'].dt.floor('15min')
+            dataframe = dataframe.merge(inf1h_15, on='date', how='left')
+        else:
+            dataframe['ema20_1h'] = float('nan')
+            dataframe['ema50_1h'] = float('nan')
+            dataframe['rsi_1h'] = float('nan')
 
         dataframe.ffill(inplace=True)
 
@@ -91,6 +97,7 @@ class XRPStrategy(IStrategy):
                 (dataframe['close'] > dataframe['ema200_1h']) &
                 (dataframe['close'] > dataframe['ema200']) &
                 # Tendance 1h haussière
+                (dataframe['ema20_1h'].notna()) &
                 (dataframe['ema20_1h'] > dataframe['ema50_1h']) &
                 (dataframe['close'] > dataframe['ema20_1h']) &
                 (dataframe['rsi_1h'] > 45) &
