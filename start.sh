@@ -5,6 +5,9 @@ mkdir -p user_data/data user_data/logs user_data/strategies
 echo "=== Copying config ==="
 cp config.json user_data/config.json 2>/dev/null || echo "config already in place"
 
+echo "=== Installing hyperopt dependencies ==="
+pip install filelock scikit-learn joblib progressbar2 --quiet
+
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
   --exchange binance \
