@@ -33,6 +33,7 @@ class XRPStrategy(IStrategy):
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe['ema200'] = ta.EMA(dataframe, timeperiod=200)
         dataframe['ema200_1h'] = ta.EMA(dataframe, timeperiod=800)
+        dataframe['adx'] = ta.ADX(dataframe, timeperiod=14)
 
         inf = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='5m')
         inf['rsi'] = ta.RSI(inf, timeperiod=14)
@@ -75,6 +76,8 @@ class XRPStrategy(IStrategy):
                 (dataframe['ema200_1h'].notna()) &
                 (dataframe['close'] > dataframe['ema200_1h']) &
                 (dataframe['close'] > dataframe['ema200']) &
+                (dataframe['adx'] > 25) &
+                (dataframe['close'].pct_change(4) > 0) &
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
                 (dataframe['5m_rsi'] < self.buy_rsi_max.value) &
