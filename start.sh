@@ -24,7 +24,7 @@ freqtrade hyperopt \
   --config user_data/config.json \
   --datadir user_data/data/binance \
   --hyperopt-loss SharpeHyperOptLoss \
-  --spaces buy sell roi stoploss \
+  --spaces buy exit roi stoploss \
   --epochs 500 \
   --timerange 20251001-20260501 \
   --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
