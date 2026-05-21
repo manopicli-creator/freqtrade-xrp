@@ -46,14 +46,9 @@ class XRPStrategy(IStrategy):
         inf5['macdsignal'] = macd['macdsignal']
         bollinger = ta.BBANDS(inf5, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
         inf5['bb_upper'] = bollinger['upperband']
-
         inf5['macd_cross_up'] = (
             (inf5['macd'] > inf5['macdsignal']) &
             (inf5['macd'].shift(1) <= inf5['macdsignal'].shift(1))
-        )
-        inf5['macd_cross_down'] = (
-            (inf5['macd'] < inf5['macdsignal']) &
-            (inf5['macd'].shift(1) >= inf5['macdsignal'].shift(1))
         )
         inf5['volume_ok'] = inf5['volume'] > inf5['volume'].rolling(20).mean()
 
@@ -62,14 +57,12 @@ class XRPStrategy(IStrategy):
             'ema20': '5m_ema20',
             'ema50': '5m_ema50',
             'macd_cross_up': '5m_macd_cross_up',
-            'macd_cross_down': '5m_macd_cross_down',
             'bb_upper': '5m_bb_upper',
             'volume_ok': '5m_volume_ok'
         }, inplace=True)
 
         inf5_15 = inf5[['date', '5m_rsi', '5m_ema20', '5m_ema50',
-                         '5m_macd_cross_up', '5m_macd_cross_down',
-                         '5m_bb_upper', '5m_volume_ok']].copy()
+                         '5m_macd_cross_up', '5m_bb_upper', '5m_volume_ok']].copy()
         inf5_15['date'] = inf5_15['date'].dt.floor('15min')
         inf5_15 = inf5_15.groupby('date').last().reset_index()
         dataframe = dataframe.merge(inf5_15, on='date', how='left')
@@ -96,19 +89,15 @@ class XRPStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # Filtre macro
                 (dataframe['ema200_1h'].notna()) &
                 (dataframe['close'] > dataframe['ema200_1h']) &
                 (dataframe['close'] > dataframe['ema200']) &
-                # Tendance 1h haussière
                 (dataframe['ema20_1h'].notna()) &
                 (dataframe['ema20_1h'] > dataframe['ema50_1h']) &
                 (dataframe['close'] > dataframe['ema20_1h']) &
                 (dataframe['rsi_1h'] > 45) &
-                # Momentum 15m
                 (dataframe['adx'] > 25) &
                 (dataframe['close'].pct_change(4) > 0) &
-                # Signaux 5m
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
                 (dataframe['5m_rsi'] < self.buy_rsi_max.value) &
@@ -121,15 +110,11 @@ class XRPStrategy(IStrategy):
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Sortir si MACD croise à la baisse sur 5m
-        # OU si RSI 1h repasse sous 40 (tendance 1h se retourne)
-        # OU si EMA20 repasse sous EMA50 sur 5m
+        # Sortir uniquement si la tendance 1h se retourne franchement
         dataframe.loc[
             (
-                (dataframe['5m_macd_cross_down'] == True) |
-                (dataframe['rsi_1h'] < 40) |
-                (dataframe['5m_ema20'] < dataframe['5m_ema50'])
+                (dataframe['rsi_1h'] < 40) &
+                (dataframe['ema20_1h'] < dataframe['ema50_1h'])
             ),
             'exit_long'] = 1
         return dataframe
-        
