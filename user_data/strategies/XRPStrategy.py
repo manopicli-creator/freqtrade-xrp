@@ -5,6 +5,8 @@ import talib.abstract as ta
 class XRPStrategy(IStrategy):
     INTERFACE_VERSION = 3
     timeframe = '15m'
+    startup_candle_count = 800
+
     stoploss = -0.05
     minimal_roi = {
         "0": 0.04,
@@ -12,11 +14,14 @@ class XRPStrategy(IStrategy):
         "240": 0.01,
         "480": 0
     }
+
     trailing_stop = True
     trailing_stop_positive = 0.02
     trailing_stop_positive_offset = 0.03
     trailing_only_offset_is_reached = True
+
     use_exit_signal = False
+    can_short = False
 
     buy_rsi_min = IntParameter(30, 50, default=38, space='buy')
     buy_rsi_max = IntParameter(50, 70, default=62, space='buy')
@@ -30,15 +35,12 @@ class XRPStrategy(IStrategy):
         dataframe['ema200_1h'] = ta.EMA(dataframe, timeperiod=800)
 
         inf = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='5m')
-
         inf['rsi'] = ta.RSI(inf, timeperiod=14)
         inf['ema20'] = ta.EMA(inf, timeperiod=20)
         inf['ema50'] = ta.EMA(inf, timeperiod=50)
-
         macd = ta.MACD(inf, fastperiod=12, slowperiod=26, signalperiod=9)
         inf['macd'] = macd['macd']
         inf['macdsignal'] = macd['macdsignal']
-
         bollinger = ta.BBANDS(inf, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
         inf['bb_upper'] = bollinger['upperband']
 
@@ -70,6 +72,7 @@ class XRPStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
+                (dataframe['ema200_1h'].notna()) &
                 (dataframe['close'] > dataframe['ema200_1h']) &
                 (dataframe['close'] > dataframe['ema200']) &
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
