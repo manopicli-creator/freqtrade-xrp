@@ -2,47 +2,26 @@ from freqtrade.strategy import IStrategy, IntParameter
 from pandas import DataFrame
 import talib.abstract as ta
 import pandas as pd
-import numpy as np
 
 class XRPStrategy(IStrategy):
     INTERFACE_VERSION = 3
     timeframe = '15m'
     startup_candle_count = 800
 
-    stoploss = -0.05  # fallback sécurité, le custom stoploss prend le dessus
+    stoploss = -0.03
     minimal_roi = {
-        "0": 0.03,
-        "60": 0.02,
-        "120": 0.01,
-        "240": 0
+        "0": 0.025,
+        "30": 0.015,
+        "60": 0.01,
+        "120": 0
     }
 
-    trailing_stop = False  # désactivé, remplacé par custom stoploss
-    use_custom_stoploss = True
+    trailing_stop = False
     use_exit_signal = False
     can_short = False
 
     buy_rsi_min = IntParameter(30, 50, default=38, space='buy')
     buy_rsi_max = IntParameter(50, 70, default=62, space='buy')
-
-    def custom_stoploss(self, pair: str, trade, current_time,
-                        current_rate: float, current_profit: float, **kwargs) -> float:
-        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
-        if dataframe is None or len(dataframe) == 0:
-            return -0.03
-
-        last = dataframe.iloc[-1]
-        atr = last.get('atr', None)
-
-        if atr is None or np.isnan(atr) or atr <= 0:
-            return -0.03
-
-        # Stop à 1.5x ATR sous le prix d'entrée
-        atr_stop = (atr * 1.5) / trade.open_rate
-        # Clamp entre -1% et -4%
-        atr_stop = max(min(atr_stop, 0.04), 0.01)
-
-        return -atr_stop
 
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
@@ -55,7 +34,6 @@ class XRPStrategy(IStrategy):
         dataframe['ema200'] = ta.EMA(dataframe, timeperiod=200)
         dataframe['ema200_1h'] = ta.EMA(dataframe, timeperiod=800)
         dataframe['adx'] = ta.ADX(dataframe, timeperiod=14)
-        dataframe['atr'] = ta.ATR(dataframe, timeperiod=14)
 
         # --- Indicateurs 5m ---
         inf5 = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='5m')
