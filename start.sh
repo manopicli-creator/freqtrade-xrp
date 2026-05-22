@@ -18,10 +18,19 @@ freqtrade download-data \
   --timeframes 15m 5m 1h \
   --days 240
 
+echo "=== Creating hyperopt config ==="
+cat > user_data/config_hyperopt.json << 'EOF'
+{
+  "pairlists": [{"method": "StaticPairList"}],
+  "stake_amount": 100
+}
+EOF
+
 echo "=== Running Hyperopt ==="
 freqtrade hyperopt \
   --strategy XRPStrategy \
   --config user_data/config.json \
+  --config user_data/config_hyperopt.json \
   --datadir user_data/data/binance \
   --hyperopt-loss SharpeHyperOptLoss \
   --spaces buy roi stoploss \
