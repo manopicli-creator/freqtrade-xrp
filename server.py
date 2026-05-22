@@ -1,9 +1,11 @@
+```python
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import re
 import requests
 import os
 import time
+import threading
 
 app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
@@ -17,12 +19,14 @@ _jwt_token = None
 
 def get_jwt_token():
     global _jwt_token
-    for i in range(5):
+    if _jwt_token:
+        return _jwt_token
+    for i in range(10):
         try:
             resp = requests.post(
                 f"{FREQTRADE_URL}/api/v1/token/login",
                 json={"username": FT_USERNAME, "password": FT_PASSWORD},
-                timeout=10
+                timeout=5
             )
             if resp.status_code == 200:
                 _jwt_token = resp.json().get("access_token")
@@ -31,6 +35,15 @@ def get_jwt_token():
             pass
         time.sleep(3)
     return None
+
+def refresh_token_periodically():
+    while True:
+        time.sleep(900)  # 15 minutes
+        global _jwt_token
+        _jwt_token = None
+        get_jwt_token()
+
+threading.Thread(target=refresh_token_periodically, daemon=True).start()
 
 def get_auth_headers():
     token = get_jwt_token()
@@ -126,3 +139,6 @@ if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=False)
+```
+
+Poussez sur GitHub. La différence principale : le token se renouvelle automatiquement toutes les 15 minutes et réessaie 10 fois au démarrage avec 3 secondes entre chaque tentative.
