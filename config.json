@@ -18,7 +18,7 @@
     },
     "entry_pricing": {
         "price_side": "same",
-        "use_order_book": true,
+        "use_order_book": false,
         "order_book_top": 1,
         "price_last_balance": 0.0
     },
@@ -33,6 +33,11 @@
         "pair_whitelist": [],
         "pair_blacklist": [
             "BNB/USDT",
+            "RLUSD/USDT",
+            "USDC/USDT",
+            "BUSD/USDT",
+            "TUSD/USDT",
+            "FDUSD/USDT",
             ".*UP/USDT",
             ".*DOWN/USDT",
             ".*BEAR/USDT",
