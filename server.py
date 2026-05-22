@@ -12,7 +12,6 @@ FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://127.0.0.1:8081')
 FT_USERNAME = "Manopic"
 FT_PASSWORD = "Bornomotsi"
 
-# Cache du token JWT
 _jwt_token = None
 
 def get_jwt_token():
@@ -51,8 +50,6 @@ def proxy(path):
         return Response(status=200)
 
     url = f"{FREQTRADE_URL}/api/v1/{path}"
-
-    # Utilise toujours le token JWT interne
     headers = get_auth_headers()
     headers['Content-Type'] = 'application/json'
 
@@ -65,7 +62,6 @@ def proxy(path):
         timeout=30
     )
 
-    # Si token expiré, renouvelle et réessaie
     if resp.status_code == 401:
         global _jwt_token
         _jwt_token = None
