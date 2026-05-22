@@ -9,6 +9,31 @@ CORS(app, origins="*", supports_credentials=True)
 
 STRATEGY_FILE = "user_data/strategies/XRPStrategy.py"
 FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://127.0.0.1:8081')
+FT_USERNAME = "Manopic"
+FT_PASSWORD = "Bornomotsi"
+
+# Cache du token JWT
+_jwt_token = None
+
+def get_jwt_token():
+    global _jwt_token
+    try:
+        resp = requests.post(
+            f"{FREQTRADE_URL}/api/v1/token/login",
+            json={"username": FT_USERNAME, "password": FT_PASSWORD},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            _jwt_token = resp.json().get("access_token")
+    except Exception:
+        pass
+    return _jwt_token
+
+def get_auth_headers():
+    token = get_jwt_token()
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
 
 @app.route('/')
 def index():
@@ -24,8 +49,13 @@ def index():
 def proxy(path):
     if request.method == 'OPTIONS':
         return Response(status=200)
+
     url = f"{FREQTRADE_URL}/api/v1/{path}"
-    headers = {k: v for k, v in request.headers if k not in ['Host', 'Content-Length']}
+
+    # Utilise toujours le token JWT interne
+    headers = get_auth_headers()
+    headers['Content-Type'] = 'application/json'
+
     resp = requests.request(
         method=request.method,
         url=url,
@@ -34,6 +64,21 @@ def proxy(path):
         params=request.args,
         timeout=30
     )
+
+    # Si token expiré, renouvelle et réessaie
+    if resp.status_code == 401:
+        global _jwt_token
+        _jwt_token = None
+        headers = get_auth_headers()
+        resp = requests.request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            json=request.get_json(silent=True),
+            params=request.args,
+            timeout=30
+        )
+
     excluded = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     response_headers = {k: v for k, v in resp.headers.items() if k.lower() not in excluded}
     return Response(resp.content, status=resp.status_code, headers=response_headers)
@@ -49,17 +94,13 @@ def update_strategy():
     with open(STRATEGY_FILE, 'r') as f:
         content = f.read()
 
-    # Stoploss
     content = re.sub(r'stoploss = -[\d.]+', f'stoploss = -{stoploss}', content)
-    # ROI
     content = re.sub(r'"0": [\d.]+', f'"0": {roi}', content)
-    # RSI entry
     content = re.sub(
         r'buy_rsi_min = IntParameter\(30, 50, default=\d+',
         f'buy_rsi_min = IntParameter(30, 50, default={int(rsi_entry)}',
         content
     )
-    # RSI exit
     content = re.sub(
         r'buy_rsi_max = IntParameter\(50, 70, default=\d+',
         f'buy_rsi_max = IntParameter(50, 70, default={int(rsi_exit)}',
@@ -69,12 +110,10 @@ def update_strategy():
     with open(STRATEGY_FILE, 'w') as f:
         f.write(content)
 
-    # Recharge la stratégie sans redémarrer le bot
     try:
-        auth = request.headers.get("Authorization")
         requests.post(
             f"{FREQTRADE_URL}/api/v1/reload_config",
-            headers={"Authorization": auth},
+            headers=get_auth_headers(),
             timeout=10
         )
     except Exception:
