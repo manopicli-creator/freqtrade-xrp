@@ -3,6 +3,7 @@ from flask_cors import CORS
 import re
 import requests
 import os
+import time
 
 app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
@@ -16,17 +17,20 @@ _jwt_token = None
 
 def get_jwt_token():
     global _jwt_token
-    try:
-        resp = requests.post(
-            f"{FREQTRADE_URL}/api/v1/token/login",
-            json={"username": FT_USERNAME, "password": FT_PASSWORD},
-            timeout=10
-        )
-        if resp.status_code == 200:
-            _jwt_token = resp.json().get("access_token")
-    except Exception:
-        pass
-    return _jwt_token
+    for i in range(5):
+        try:
+            resp = requests.post(
+                f"{FREQTRADE_URL}/api/v1/token/login",
+                json={"username": FT_USERNAME, "password": FT_PASSWORD},
+                timeout=10
+            )
+            if resp.status_code == 200:
+                _jwt_token = resp.json().get("access_token")
+                return _jwt_token
+        except Exception:
+            pass
+        time.sleep(3)
+    return None
 
 def get_auth_headers():
     token = get_jwt_token()
