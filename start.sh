@@ -1,3 +1,4 @@
+```bash
 #!/bin/bash
 echo "=== Starting setup ==="
 mkdir -p user_data/data user_data/logs user_data/strategies
@@ -7,6 +8,11 @@ cp config.json user_data/config.json 2>/dev/null || echo "config already in plac
 
 echo "=== Installing hyperopt dependencies ==="
 pip install filelock scikit-learn joblib progressbar2 optuna --quiet
+
+echo "=== Starting Flask first ==="
+python server.py &
+FLASKPID=$!
+echo "Flask PID: $FLASKPID"
 
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
@@ -49,8 +55,16 @@ freqtrade trade \
 FTPID=$!
 echo "Freqtrade PID: $FTPID"
 
-echo "=== Waiting for Freqtrade to start ==="
+echo "=== Waiting for Freqtrade API ==="
 sleep 30
 
-echo "=== Starting Flask ==="
-python server.py
+echo "=== All systems running ==="
+wait $FLASKPID
+```
+
+**Ce qui change :**
+- Flask démarre **en premier** → Railway est content immédiatement
+- Download + hyperopt + Freqtrade tournent ensuite
+- `wait $FLASKPID` à la fin garde le process principal vivant
+
+Poussez sur GitHub.
