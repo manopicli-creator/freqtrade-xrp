@@ -89,15 +89,18 @@ class XRPStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
+                # Filtre macro
                 (dataframe['ema200_1h'].notna()) &
                 (dataframe['close'] > dataframe['ema200_1h']) &
                 (dataframe['close'] > dataframe['ema200']) &
+                # Tendance 1h haussière
                 (dataframe['ema20_1h'].notna()) &
                 (dataframe['ema20_1h'] > dataframe['ema50_1h']) &
-                (dataframe['close'] > dataframe['ema20_1h']) &
                 (dataframe['rsi_1h'] > 45) &
-                (dataframe['adx'] > 25) &
+                # Momentum 15m — ADX abaissé à 20
+                (dataframe['adx'] > 20) &
                 (dataframe['close'].pct_change(4) > 0) &
+                # Signaux 5m
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
                 (dataframe['5m_rsi'] < self.buy_rsi_max.value) &
@@ -110,7 +113,6 @@ class XRPStrategy(IStrategy):
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Sortir uniquement si la tendance 1h se retourne franchement
         dataframe.loc[
             (
                 (dataframe['rsi_1h'] < 40) &
