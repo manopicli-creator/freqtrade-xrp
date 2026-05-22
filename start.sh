@@ -50,7 +50,7 @@ FTPID=$!
 echo "Freqtrade PID: $FTPID"
 
 echo "=== Waiting for Freqtrade to start ==="
-sleep 15
+sleep 30
 
 echo "=== Starting Flask ==="
 python server.py
