@@ -23,6 +23,7 @@ class XRPStrategy(IStrategy):
 
     buy_rsi_min = IntParameter(30, 50, default=35, space='buy')
     buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
+    buy_adx_min = IntParameter(10, 30, default=20, space='buy')
 
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
@@ -89,11 +90,11 @@ class XRPStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # Filtre macro allégé — juste EMA200 sur 15m
+                # Filtre macro
                 (dataframe['ema200'].notna()) &
                 (dataframe['close'] > dataframe['ema200']) &
-                # ADX abaissé à 15
-                (dataframe['adx'] > 15) &
+                # ADX dynamique via slider
+                (dataframe['adx'] > self.buy_adx_min.value) &
                 # Signaux 5m
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
