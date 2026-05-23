@@ -51,8 +51,7 @@ echo "=== Starting Freqtrade ==="
 freqtrade trade \
   --strategy XRPStrategy \
   --config user_data/config.json \
-  --logfile user_data/logs/freqtrade.log \
-  --no-api-auth &
+  --logfile user_data/logs/freqtrade.log &
 FTPID=$!
 echo "Freqtrade PID: $FTPID"
 
