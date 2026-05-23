@@ -1,3 +1,6 @@
+Voici le `start.sh` complet avec les deux changements :
+
+```bash
 #!/bin/bash
 echo "=== Starting setup ==="
 mkdir -p user_data/data user_data/logs user_data/strategies
@@ -23,6 +26,9 @@ freqtrade download-data \
   --timeframes 15m 5m 1h \
   --days 240
 
+echo "=== Removing old hyperopt params ==="
+rm -f user_data/strategies/XRPStrategy.json
+
 echo "=== Creating hyperopt config ==="
 cat > user_data/config_hyperopt.json << 'EOF'
 {
@@ -37,7 +43,7 @@ freqtrade hyperopt \
   --config user_data/config.json \
   --config user_data/config_hyperopt.json \
   --datadir user_data/data/bybit \
-  --hyperopt-loss SharpeHyperOptLoss \
+  --hyperopt-loss ProfitDrawDownHyperOptLoss \
   --spaces buy roi stoploss \
   --epochs 200 \
   --job-workers 1 \
@@ -59,3 +65,6 @@ sleep 30
 
 echo "=== All systems running ==="
 wait $FLASKPID
+```
+
+Poussez `start.sh` et `XRPStrategy.py` sur GitHub.
