@@ -183,10 +183,17 @@ def set_mode():
 
         # Format correct pour Freqtrade
         strategy_params = {
-            "buy_rsi_min": params["rsi_min"],
-            "buy_rsi_max": params["rsi_max"],
-            "minimal_roi": params["roi"],
-            "stoploss": params["stoploss"]
+            "params": {
+                "buy": {
+                    "buy_rsi_min": {"val": params["rsi_min"]},
+                    "buy_rsi_max": {"val": params["rsi_max"]},
+                    "buy_adx_min": {"val": params["adx"]}
+                },
+                "roi": params["roi"],
+                "stoploss": {
+                    "stoploss": params["stoploss"]
+                }
+            }
         }
 
         os.makedirs("user_data/strategies", exist_ok=True)
