@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
 
 STRATEGY_FILE = "user_data/strategies/XRPStrategy.py"
-FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://127.0.0.1:8081')
+FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://localhost:8081')
 FT_USERNAME = "Manopic"
 FT_PASSWORD = "Bornomotsi"
 
@@ -36,11 +36,12 @@ def get_jwt_token():
     return None
 
 def refresh_token_periodically():
+    time.sleep(60)
     while True:
-        time.sleep(60)  # toutes les minutes
         global _jwt_token
         _jwt_token = None
         get_jwt_token()
+        time.sleep(60)
 
 threading.Thread(target=refresh_token_periodically, daemon=True).start()
 
@@ -57,7 +58,8 @@ def index():
     <h1>🤖 Freqtrade XRP Bot</h1>
     <p>Bot status: <b style="color:#00ff88">RUNNING</b></p>
     <a href="/api/v1/ping" style="color:#00aaff">API Ping</a> |
-    <a href="/debug/token" style="color:#00aaff">Debug Token</a>
+    <a href="/debug/token" style="color:#00aaff">Debug Token</a> |
+    <a href="/debug/login" style="color:#00aaff">Debug Login</a>
     </body></html>
     '''
 
@@ -72,6 +74,21 @@ def debug_token():
         "token_preview": fresh[:20] + "..." if fresh else None,
         "freqtrade_url": FREQTRADE_URL
     })
+
+@app.route('/debug/login')
+def debug_login():
+    try:
+        resp = requests.post(
+            f"{FREQTRADE_URL}/api/v1/token/login",
+            json={"username": FT_USERNAME, "password": FT_PASSWORD},
+            timeout=5
+        )
+        return jsonify({
+            "status_code": resp.status_code,
+            "response": resp.json()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "type": type(e).__name__})
 
 @app.route('/api/v1/<path:path>', methods=['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'])
 def proxy(path):
