@@ -22,13 +22,11 @@ def get_auth_headers():
     return {"Authorization": f"Basic {credentials}"}
 
 def get_mode_params(level):
-    """level 0-100 : 0=bear, 50=neutre, 100=bull"""
     if level <= 20:
         return {
             "adx": 25,
             "rsi_min": 48,
             "rsi_max": 53,
-            "macro_filter": True,
             "stoploss": -0.03,
             "roi": {"0": 0.03, "60": 0.02, "120": 0.01, "240": 0}
         }
@@ -37,7 +35,6 @@ def get_mode_params(level):
             "adx": 22,
             "rsi_min": 44,
             "rsi_max": 56,
-            "macro_filter": True,
             "stoploss": -0.04,
             "roi": {"0": 0.025, "60": 0.015, "120": 0.008, "240": 0}
         }
@@ -46,7 +43,6 @@ def get_mode_params(level):
             "adx": 20,
             "rsi_min": 40,
             "rsi_max": 60,
-            "macro_filter": False,
             "stoploss": -0.05,
             "roi": {"0": 0.02, "45": 0.012, "90": 0.006, "180": 0}
         }
@@ -55,7 +51,6 @@ def get_mode_params(level):
             "adx": 17,
             "rsi_min": 37,
             "rsi_max": 63,
-            "macro_filter": False,
             "stoploss": -0.06,
             "roi": {"0": 0.018, "45": 0.01, "90": 0.005, "180": 0}
         }
@@ -64,7 +59,6 @@ def get_mode_params(level):
             "adx": 15,
             "rsi_min": 35,
             "rsi_max": 65,
-            "macro_filter": False,
             "stoploss": -0.08,
             "roi": {"0": 0.015, "30": 0.008, "60": 0.004, "120": 0}
         }
@@ -184,27 +178,21 @@ def set_mode():
         else:
             label = "🚀 Bull Market"
 
-        # Sauvegarde le niveau actuel
         with open('bot_mode.json', 'w') as f:
             json.dump({"level": level, "label": label}, f)
 
-        # Met à jour XRPStrategy.json
+        # Format correct pour Freqtrade
         strategy_params = {
-            "params": {
-                "buy": {
-                    "buy_rsi_min": {"val": params["rsi_min"]},
-                    "buy_rsi_max": {"val": params["rsi_max"]}
-                },
-                "roi": {str(k): v for k, v in params["roi"].items()},
-                "stoploss": {"stoploss": params["stoploss"]}
-            }
+            "buy_rsi_min": params["rsi_min"],
+            "buy_rsi_max": params["rsi_max"],
+            "minimal_roi": params["roi"],
+            "stoploss": params["stoploss"]
         }
 
         os.makedirs("user_data/strategies", exist_ok=True)
         with open(STRATEGY_JSON, 'w') as f:
             json.dump(strategy_params, f, indent=2)
 
-        # Reload Freqtrade
         try:
             requests.post(
                 f"{FREQTRADE_URL}/api/v1/reload_config",
