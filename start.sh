@@ -1,6 +1,3 @@
-Voici le `start.sh` complet avec les deux changements :
-
-```bash
 #!/bin/bash
 echo "=== Starting setup ==="
 mkdir -p user_data/data user_data/logs user_data/strategies
@@ -65,6 +62,3 @@ sleep 30
 
 echo "=== All systems running ==="
 wait $FLASKPID
-```
-
-Poussez `start.sh` et `XRPStrategy.py` sur GitHub.
