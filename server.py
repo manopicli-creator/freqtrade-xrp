@@ -26,25 +26,10 @@ def index():
     <h1>🤖 Freqtrade XRP Bot</h1>
     <p>Bot status: <b style="color:#00ff88">RUNNING</b></p>
     <a href="/api/v1/ping" style="color:#00aaff">API Ping</a> |
-    <a href="/debug/login" style="color:#00aaff">Debug Login</a>
+    <a href="/debug/basic" style="color:#00aaff">Debug Basic</a> |
+    <a href="/public/profit" style="color:#00aaff">Public Profit</a>
     </body></html>
     '''
-
-@app.route('/debug/login')
-def debug_login():
-    try:
-        resp = requests.post(
-            f"{FREQTRADE_URL}/api/v1/token/login",
-            json={"username": FT_USERNAME, "password": FT_PASSWORD},
-            timeout=5
-        )
-        return jsonify({
-            "status_code": resp.status_code,
-            "response_text": resp.text,
-            "basic_auth_test": None
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)})
 
 @app.route('/debug/basic')
 def debug_basic():
@@ -58,6 +43,62 @@ def debug_basic():
             "status_code": resp.status_code,
             "response_text": resp.text[:200]
         })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/public/profit')
+def public_profit():
+    try:
+        resp = requests.get(
+            f"{FREQTRADE_URL}/api/v1/profit",
+            headers=get_auth_headers(),
+            timeout=10
+        )
+        return Response(resp.content, status=resp.status_code,
+                       headers={'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*'})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/public/status')
+def public_status():
+    try:
+        resp = requests.get(
+            f"{FREQTRADE_URL}/api/v1/status",
+            headers=get_auth_headers(),
+            timeout=10
+        )
+        return Response(resp.content, status=resp.status_code,
+                       headers={'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*'})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/public/trades')
+def public_trades():
+    try:
+        resp = requests.get(
+            f"{FREQTRADE_URL}/api/v1/trades?limit=20",
+            headers=get_auth_headers(),
+            timeout=10
+        )
+        return Response(resp.content, status=resp.status_code,
+                       headers={'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*'})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/public/balance')
+def public_balance():
+    try:
+        resp = requests.get(
+            f"{FREQTRADE_URL}/api/v1/balance",
+            headers=get_auth_headers(),
+            timeout=10
+        )
+        return Response(resp.content, status=resp.status_code,
+                       headers={'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*'})
     except Exception as e:
         return jsonify({"error": str(e)})
 
