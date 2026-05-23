@@ -8,7 +8,7 @@ class XRPStrategy(IStrategy):
     timeframe = '15m'
     startup_candle_count = 800
 
-    stoploss = -0.03
+    stoploss = -0.05
     minimal_roi = {
         "0": 0.03,
         "60": 0.02,
@@ -21,8 +21,8 @@ class XRPStrategy(IStrategy):
     exit_profit_only = False
     can_short = False
 
-    buy_rsi_min = IntParameter(30, 50, default=38, space='buy')
-    buy_rsi_max = IntParameter(50, 70, default=62, space='buy')
+    buy_rsi_min = IntParameter(30, 50, default=35, space='buy')
+    buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
 
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
@@ -89,17 +89,11 @@ class XRPStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # Filtre macro
-                (dataframe['ema200_1h'].notna()) &
-                (dataframe['close'] > dataframe['ema200_1h']) &
+                # Filtre macro allégé — juste EMA200 sur 15m
+                (dataframe['ema200'].notna()) &
                 (dataframe['close'] > dataframe['ema200']) &
-                # Tendance 1h haussière
-                (dataframe['ema20_1h'].notna()) &
-                (dataframe['ema20_1h'] > dataframe['ema50_1h']) &
-                (dataframe['rsi_1h'] > 45) &
-                # Momentum 15m — ADX abaissé à 20
-                (dataframe['adx'] > 20) &
-                (dataframe['close'].pct_change(4) > 0) &
+                # ADX abaissé à 15
+                (dataframe['adx'] > 15) &
                 # Signaux 5m
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
