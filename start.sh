@@ -54,7 +54,7 @@ echo "Freqtrade PID: $FTPID"
 
 echo "=== Waiting for Freqtrade to be ready ==="
 for i in $(seq 1 30); do
-    if curl -s http://127.0.0.1:8081/api/v1/ping > /dev/null 2>&1; then
+    if python3 -c "import requests; requests.get('http://localhost:8081/api/v1/ping', timeout=2)" 2>/dev/null; then
         echo "Freqtrade ready after ${i} attempts!"
         break
     fi
