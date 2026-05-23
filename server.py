@@ -5,6 +5,7 @@ import requests
 import os
 import time
 import threading
+import base64
 
 app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
@@ -15,7 +16,8 @@ FT_USERNAME = "mano"
 FT_PASSWORD = "Freqtrade2026"
 
 def get_auth_headers():
-    return {}
+    credentials = base64.b64encode(f"{FT_USERNAME}:{FT_PASSWORD}".encode()).decode()
+    return {"Authorization": f"Basic {credentials}"}
 
 @app.route('/')
 def index():
@@ -24,31 +26,40 @@ def index():
     <h1>🤖 Freqtrade XRP Bot</h1>
     <p>Bot status: <b style="color:#00ff88">RUNNING</b></p>
     <a href="/api/v1/ping" style="color:#00aaff">API Ping</a> |
-    <a href="/debug/token" style="color:#00aaff">Debug Token</a> |
     <a href="/debug/login" style="color:#00aaff">Debug Login</a>
     </body></html>
     '''
 
-@app.route('/debug/token')
-def debug_token():
-    return jsonify({
-        "auth_mode": "no-api-auth",
-        "freqtrade_url": FREQTRADE_URL
-    })
-
 @app.route('/debug/login')
 def debug_login():
     try:
-        resp = requests.get(
-            f"{FREQTRADE_URL}/api/v1/ping",
+        resp = requests.post(
+            f"{FREQTRADE_URL}/api/v1/token/login",
+            json={"username": FT_USERNAME, "password": FT_PASSWORD},
             timeout=5
         )
         return jsonify({
             "status_code": resp.status_code,
-            "response": resp.json()
+            "response_text": resp.text,
+            "basic_auth_test": None
         })
     except Exception as e:
-        return jsonify({"error": str(e), "type": type(e).__name__})
+        return jsonify({"error": str(e)})
+
+@app.route('/debug/basic')
+def debug_basic():
+    try:
+        resp = requests.get(
+            f"{FREQTRADE_URL}/api/v1/status",
+            headers=get_auth_headers(),
+            timeout=5
+        )
+        return jsonify({
+            "status_code": resp.status_code,
+            "response_text": resp.text[:200]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 @app.route('/api/v1/<path:path>', methods=['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'])
 def proxy(path):
@@ -56,7 +67,8 @@ def proxy(path):
         return Response(status=200)
 
     url = f"{FREQTRADE_URL}/api/v1/{path}"
-    headers = {'Content-Type': 'application/json'}
+    headers = get_auth_headers()
+    headers['Content-Type'] = 'application/json'
 
     resp = requests.request(
         method=request.method,
@@ -101,6 +113,7 @@ def update_strategy():
     try:
         requests.post(
             f"{FREQTRADE_URL}/api/v1/reload_config",
+            headers=get_auth_headers(),
             timeout=10
         )
     except Exception:
