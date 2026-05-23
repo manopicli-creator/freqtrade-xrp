@@ -85,7 +85,9 @@ def debug_login():
         )
         return jsonify({
             "status_code": resp.status_code,
-            "response": resp.json()
+            "response_text": resp.text,
+            "url_used": f"{FREQTRADE_URL}/api/v1/token/login",
+            "credentials_used": {"username": FT_USERNAME, "password": FT_PASSWORD[:3] + "..."}
         })
     except Exception as e:
         return jsonify({"error": str(e), "type": type(e).__name__})
