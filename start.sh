@@ -44,6 +44,9 @@ freqtrade hyperopt \
     DOGE/USDT ADA/USDT TRX/USDT \
   || echo "Hyperopt failed, continuing anyway..."
 
+echo "=== Removing old database ==="
+rm -f tradesv3.dryrun.sqlite
+
 echo "=== Starting Freqtrade ==="
 freqtrade trade \
   --strategy XRPStrategy \
