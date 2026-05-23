@@ -8,12 +8,6 @@ cp config.json user_data/config.json 2>/dev/null || echo "config already in plac
 echo "=== Installing hyperopt dependencies ==="
 pip install filelock scikit-learn joblib progressbar2 optuna --quiet
 
-echo "=== Starting Flask first ==="
-python server.py &
-FLASKPID=$!
-echo "Flask PID: $FLASKPID"
-sleep 2
-
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
   --exchange bybit \
@@ -58,8 +52,15 @@ freqtrade trade \
 FTPID=$!
 echo "Freqtrade PID: $FTPID"
 
-echo "=== Waiting for Freqtrade API ==="
-sleep 30
+echo "=== Waiting for Freqtrade to be ready ==="
+for i in $(seq 1 30); do
+    if curl -s http://127.0.0.1:8081/api/v1/ping > /dev/null 2>&1; then
+        echo "Freqtrade ready after ${i} attempts!"
+        break
+    fi
+    echo "Attempt $i/30 - waiting..."
+    sleep 3
+done
 
-echo "=== All systems running ==="
-wait $FLASKPID
+echo "=== Starting Flask ==="
+python server.py
