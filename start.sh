@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 echo "=== Starting setup ==="
 mkdir -p user_data/data user_data/logs user_data/strategies
@@ -16,10 +15,10 @@ echo "Flask PID: $FLASKPID"
 
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
-  --exchange binance \
-  --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
+  --exchange bybit \
+  --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
     DOGE/USDT ADA/USDT TRX/USDT AVAX/USDT LINK/USDT \
-    DOT/USDT SHIB/USDT SUI/USDT BCH/USDT LTC/USDT \
+    DOT/USDT SUI/USDT BCH/USDT LTC/USDT \
     NEAR/USDT APT/USDT UNI/USDT PEPE/USDT OP/USDT \
   --timeframes 15m 5m 1h \
   --days 240
@@ -37,13 +36,13 @@ freqtrade hyperopt \
   --strategy XRPStrategy \
   --config user_data/config.json \
   --config user_data/config_hyperopt.json \
-  --datadir user_data/data/binance \
+  --datadir user_data/data/bybit \
   --hyperopt-loss SharpeHyperOptLoss \
   --spaces buy roi stoploss \
   --epochs 200 \
   --job-workers 1 \
   --timerange 20251001-20260520 \
-  --pairs BTC/USDT ETH/USDT XRP/USDT BNB/USDT SOL/USDT \
+  --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT \
     DOGE/USDT ADA/USDT TRX/USDT \
   || echo "Hyperopt failed, continuing anyway..."
 
@@ -60,11 +59,3 @@ sleep 30
 
 echo "=== All systems running ==="
 wait $FLASKPID
-```
-
-**Ce qui change :**
-- Flask démarre **en premier** → Railway est content immédiatement
-- Download + hyperopt + Freqtrade tournent ensuite
-- `wait $FLASKPID` à la fin garde le process principal vivant
-
-Poussez sur GitHub.
