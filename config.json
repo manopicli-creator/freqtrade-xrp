@@ -29,12 +29,15 @@
     },
     "download_trades": false,
     "exchange": {
-        "name": "binance",
+        "name": "bybit",
         "pair_whitelist": [],
         "pair_blacklist": [
-            "BNB/USDT",
-            "RLUSD/USDT",
             "USDC/USDT",
+            "USDE/USDT",
+            "EUR/USDT",
+            "USD1/USDT",
+            "U/USDT",
+            "RLUSD/USDT",
             "BUSD/USDT",
             "TUSD/USDT",
             "FDUSD/USDT",
