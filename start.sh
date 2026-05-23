@@ -44,6 +44,9 @@ freqtrade hyperopt \
     DOGE/USDT ADA/USDT TRX/USDT \
   || echo "Hyperopt failed, continuing anyway..."
 
+echo "=== Hyperopt JSON content ==="
+cat user_data/strategies/XRPStrategy.json || echo "No JSON file"
+
 echo "=== Removing old database ==="
 rm -f tradesv3.dryrun.sqlite
 
