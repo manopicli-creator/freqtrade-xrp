@@ -11,8 +11,8 @@ CORS(app, origins="*", supports_credentials=True)
 
 STRATEGY_FILE = "user_data/strategies/XRPStrategy.py"
 FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://localhost:8081')
-FT_USERNAME = "Manopic"
-FT_PASSWORD = "Bornomotsi"
+FT_USERNAME = "mano"
+FT_PASSWORD = "Tara82@"
 
 _jwt_token = None
 
