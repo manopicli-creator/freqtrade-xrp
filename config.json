@@ -86,7 +86,9 @@
             "https://kindness-stream-flap.ngrok-free.dev",
             "https://freqtrade-xrp-production.up.railway.app",
             "https://preview--d62c42a7-4dff-435f-839b-7ebf001afe9a.lovable.app"
-        ]
+        ],
+        "username": "mano",
+        "password": "Freqtrade2026"
     },
     "bot_name": "freqtrade",
     "initial_state": "running",
