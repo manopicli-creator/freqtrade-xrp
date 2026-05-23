@@ -183,17 +183,28 @@ def set_mode():
 
         # Format correct pour Freqtrade
         strategy_params = {
+            "strategy_name": "XRPStrategy",
             "params": {
                 "buy": {
-                    "buy_rsi_min": {"val": params["rsi_min"]},
-                    "buy_rsi_max": {"val": params["rsi_max"]},
-                    "buy_adx_min": {"val": params["adx"]}
+                    "buy_rsi_min": params["rsi_min"],
+                    "buy_rsi_max": params["rsi_max"],
+                    "buy_adx_min": params["adx"]
                 },
                 "roi": params["roi"],
                 "stoploss": {
                     "stoploss": params["stoploss"]
+                },
+                "trailing": {
+                    "trailing_stop": False,
+                    "trailing_stop_positive": None,
+                    "trailing_stop_positive_offset": 0.0,
+                    "trailing_only_offset_is_reached": False
+                },
+                "max_open_trades": {
+                    "max_open_trades": 10
                 }
-            }
+            },
+            "ft_stratparam_v": 1
         }
 
         os.makedirs("user_data/strategies", exist_ok=True)
