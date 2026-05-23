@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import re
@@ -139,6 +138,3 @@ if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=False)
-```
-
-Poussez sur GitHub. La différence principale : le token se renouvelle automatiquement toutes les 15 minutes et réessaie 10 fois au démarrage avec 3 secondes entre chaque tentative.
