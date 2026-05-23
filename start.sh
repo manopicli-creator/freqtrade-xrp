@@ -12,6 +12,7 @@ echo "=== Starting Flask first ==="
 python server.py &
 FLASKPID=$!
 echo "Flask PID: $FLASKPID"
+sleep 2
 
 echo "=== Downloading data for backtest ==="
 freqtrade download-data \
