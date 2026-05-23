@@ -14,41 +14,7 @@ FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://localhost:8081')
 FT_USERNAME = "mano"
 FT_PASSWORD = "Freqtrade2026"
 
-_jwt_token = None
-
-def get_jwt_token():
-    global _jwt_token
-    if _jwt_token:
-        return _jwt_token
-    for i in range(10):
-        try:
-            resp = requests.post(
-                f"{FREQTRADE_URL}/api/v1/token/login",
-                json={"username": FT_USERNAME, "password": FT_PASSWORD},
-                timeout=5
-            )
-            if resp.status_code == 200:
-                _jwt_token = resp.json().get("access_token")
-                return _jwt_token
-        except Exception:
-            pass
-        time.sleep(3)
-    return None
-
-def refresh_token_periodically():
-    time.sleep(60)
-    while True:
-        global _jwt_token
-        _jwt_token = None
-        get_jwt_token()
-        time.sleep(60)
-
-threading.Thread(target=refresh_token_periodically, daemon=True).start()
-
 def get_auth_headers():
-    token = get_jwt_token()
-    if token:
-        return {"Authorization": f"Bearer {token}"}
     return {}
 
 @app.route('/')
@@ -65,29 +31,21 @@ def index():
 
 @app.route('/debug/token')
 def debug_token():
-    global _jwt_token
-    current = _jwt_token
-    fresh = get_jwt_token()
     return jsonify({
-        "had_token": current is not None,
-        "has_token_now": fresh is not None,
-        "token_preview": fresh[:20] + "..." if fresh else None,
+        "auth_mode": "no-api-auth",
         "freqtrade_url": FREQTRADE_URL
     })
 
 @app.route('/debug/login')
 def debug_login():
     try:
-        resp = requests.post(
-            f"{FREQTRADE_URL}/api/v1/token/login",
-            json={"username": FT_USERNAME, "password": FT_PASSWORD},
+        resp = requests.get(
+            f"{FREQTRADE_URL}/api/v1/ping",
             timeout=5
         )
         return jsonify({
             "status_code": resp.status_code,
-            "response_text": resp.text,
-            "url_used": f"{FREQTRADE_URL}/api/v1/token/login",
-            "credentials_used": {"username": FT_USERNAME, "password": FT_PASSWORD[:3] + "..."}
+            "response": resp.json()
         })
     except Exception as e:
         return jsonify({"error": str(e), "type": type(e).__name__})
@@ -98,8 +56,7 @@ def proxy(path):
         return Response(status=200)
 
     url = f"{FREQTRADE_URL}/api/v1/{path}"
-    headers = get_auth_headers()
-    headers['Content-Type'] = 'application/json'
+    headers = {'Content-Type': 'application/json'}
 
     resp = requests.request(
         method=request.method,
@@ -109,19 +66,6 @@ def proxy(path):
         params=request.args,
         timeout=30
     )
-
-    if resp.status_code == 401:
-        global _jwt_token
-        _jwt_token = None
-        headers = get_auth_headers()
-        resp = requests.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            json=request.get_json(silent=True),
-            params=request.args,
-            timeout=30
-        )
 
     excluded = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     response_headers = {k: v for k, v in resp.headers.items() if k.lower() not in excluded}
@@ -157,7 +101,6 @@ def update_strategy():
     try:
         requests.post(
             f"{FREQTRADE_URL}/api/v1/reload_config",
-            headers=get_auth_headers(),
             timeout=10
         )
     except Exception:
