@@ -6,11 +6,13 @@ import os
 import time
 import threading
 import base64
+import json
 
 app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
 
 STRATEGY_FILE = "user_data/strategies/XRPStrategy.py"
+STRATEGY_JSON = "user_data/strategies/XRPStrategy.json"
 FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://localhost:8081')
 FT_USERNAME = "mano"
 FT_PASSWORD = "Freqtrade2026"
@@ -18,6 +20,54 @@ FT_PASSWORD = "Freqtrade2026"
 def get_auth_headers():
     credentials = base64.b64encode(f"{FT_USERNAME}:{FT_PASSWORD}".encode()).decode()
     return {"Authorization": f"Basic {credentials}"}
+
+def get_mode_params(level):
+    """level 0-100 : 0=bear, 50=neutre, 100=bull"""
+    if level <= 20:
+        return {
+            "adx": 25,
+            "rsi_min": 48,
+            "rsi_max": 53,
+            "macro_filter": True,
+            "stoploss": -0.03,
+            "roi": {"0": 0.03, "60": 0.02, "120": 0.01, "240": 0}
+        }
+    elif level <= 40:
+        return {
+            "adx": 22,
+            "rsi_min": 44,
+            "rsi_max": 56,
+            "macro_filter": True,
+            "stoploss": -0.04,
+            "roi": {"0": 0.025, "60": 0.015, "120": 0.008, "240": 0}
+        }
+    elif level <= 60:
+        return {
+            "adx": 20,
+            "rsi_min": 40,
+            "rsi_max": 60,
+            "macro_filter": False,
+            "stoploss": -0.05,
+            "roi": {"0": 0.02, "45": 0.012, "90": 0.006, "180": 0}
+        }
+    elif level <= 80:
+        return {
+            "adx": 17,
+            "rsi_min": 37,
+            "rsi_max": 63,
+            "macro_filter": False,
+            "stoploss": -0.06,
+            "roi": {"0": 0.018, "45": 0.01, "90": 0.005, "180": 0}
+        }
+    else:
+        return {
+            "adx": 15,
+            "rsi_min": 35,
+            "rsi_max": 65,
+            "macro_filter": False,
+            "stoploss": -0.08,
+            "roi": {"0": 0.015, "30": 0.008, "60": 0.004, "120": 0}
+        }
 
 @app.route('/')
 def index():
@@ -99,6 +149,77 @@ def public_balance():
         return Response(resp.content, status=resp.status_code,
                        headers={'Content-Type': 'application/json',
                                 'Access-Control-Allow-Origin': '*'})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/public/mode', methods=['GET'])
+def get_mode():
+    try:
+        if os.path.exists('bot_mode.json'):
+            with open('bot_mode.json', 'r') as f:
+                return jsonify(json.load(f))
+        return jsonify({"level": 50, "label": "Neutre"})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/set_mode', methods=['POST', 'OPTIONS'])
+def set_mode():
+    if request.method == 'OPTIONS':
+        return Response(status=200)
+    try:
+        data = request.json
+        level = int(data.get('level', 50))
+        level = max(0, min(100, level))
+
+        params = get_mode_params(level)
+
+        if level <= 20:
+            label = "🐻 Bear Market"
+        elif level <= 40:
+            label = "📉 Prudent"
+        elif level <= 60:
+            label = "⚖️ Neutre"
+        elif level <= 80:
+            label = "📈 Optimiste"
+        else:
+            label = "🚀 Bull Market"
+
+        # Sauvegarde le niveau actuel
+        with open('bot_mode.json', 'w') as f:
+            json.dump({"level": level, "label": label}, f)
+
+        # Met à jour XRPStrategy.json
+        strategy_params = {
+            "params": {
+                "buy": {
+                    "buy_rsi_min": {"val": params["rsi_min"]},
+                    "buy_rsi_max": {"val": params["rsi_max"]}
+                },
+                "roi": {str(k): v for k, v in params["roi"].items()},
+                "stoploss": {"stoploss": params["stoploss"]}
+            }
+        }
+
+        os.makedirs("user_data/strategies", exist_ok=True)
+        with open(STRATEGY_JSON, 'w') as f:
+            json.dump(strategy_params, f, indent=2)
+
+        # Reload Freqtrade
+        try:
+            requests.post(
+                f"{FREQTRADE_URL}/api/v1/reload_config",
+                headers=get_auth_headers(),
+                timeout=10
+            )
+        except Exception:
+            pass
+
+        return jsonify({
+            "status": "success",
+            "level": level,
+            "label": label,
+            "params": params
+        })
     except Exception as e:
         return jsonify({"error": str(e)})
 
