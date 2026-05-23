@@ -37,7 +37,7 @@ def get_jwt_token():
 
 def refresh_token_periodically():
     while True:
-        time.sleep(900)  # 15 minutes
+        time.sleep(60)  # toutes les minutes
         global _jwt_token
         _jwt_token = None
         get_jwt_token()
@@ -56,9 +56,22 @@ def index():
     <html><body style="background:#1a1a2e;color:white;font-family:Arial;text-align:center;padding:50px">
     <h1>🤖 Freqtrade XRP Bot</h1>
     <p>Bot status: <b style="color:#00ff88">RUNNING</b></p>
-    <a href="/api/v1/ping" style="color:#00aaff">API Ping</a>
+    <a href="/api/v1/ping" style="color:#00aaff">API Ping</a> |
+    <a href="/debug/token" style="color:#00aaff">Debug Token</a>
     </body></html>
     '''
+
+@app.route('/debug/token')
+def debug_token():
+    global _jwt_token
+    current = _jwt_token
+    fresh = get_jwt_token()
+    return jsonify({
+        "had_token": current is not None,
+        "has_token_now": fresh is not None,
+        "token_preview": fresh[:20] + "..." if fresh else None,
+        "freqtrade_url": FREQTRADE_URL
+    })
 
 @app.route('/api/v1/<path:path>', methods=['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'])
 def proxy(path):
