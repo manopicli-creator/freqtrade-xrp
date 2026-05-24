@@ -13,7 +13,8 @@ class XRPStrategy(IStrategy):
         "0": 0.03,
         "60": 0.02,
         "120": 0.01,
-        "240": 0
+        "240": 0,
+        "480": -0.02
     }
 
     trailing_stop = False
@@ -32,12 +33,10 @@ class XRPStrategy(IStrategy):
         return informative
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # --- Indicateurs 15m ---
         dataframe['ema200'] = ta.EMA(dataframe, timeperiod=200)
         dataframe['ema200_1h'] = ta.EMA(dataframe, timeperiod=800)
         dataframe['adx'] = ta.ADX(dataframe, timeperiod=14)
 
-        # --- Indicateurs 5m ---
         inf5 = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='5m')
         inf5['rsi'] = ta.RSI(inf5, timeperiod=14)
         inf5['ema20'] = ta.EMA(inf5, timeperiod=20)
@@ -68,7 +67,6 @@ class XRPStrategy(IStrategy):
         inf5_15 = inf5_15.groupby('date').last().reset_index()
         dataframe = dataframe.merge(inf5_15, on='date', how='left')
 
-        # --- Indicateurs 1h ---
         inf1h = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='1h')
         if len(inf1h) > 0:
             inf1h['ema20_1h'] = ta.EMA(inf1h, timeperiod=20)
@@ -84,18 +82,14 @@ class XRPStrategy(IStrategy):
             dataframe['rsi_1h'] = float('nan')
 
         dataframe.ffill(inplace=True)
-
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
-                # Filtre macro
                 (dataframe['ema200'].notna()) &
                 (dataframe['close'] > dataframe['ema200']) &
-                # ADX dynamique via slider
                 (dataframe['adx'] > self.buy_adx_min.value) &
-                # Signaux 5m
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
                 (dataframe['5m_rsi'] < self.buy_rsi_max.value) &
