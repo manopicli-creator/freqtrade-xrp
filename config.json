@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.freqtrade.io/schema.json",
-    "max_open_trades": 10,
+    "max_open_trades": 5,
     "stake_currency": "USDT",
     "stake_amount": "unlimited",
     "tradable_balance_ratio": 0.99,
@@ -13,7 +13,7 @@
     "unfilledtimeout": {
         "entry": 10,
         "exit": 10,
-        "exit_timeout_count": 0,
+        "exit_timeout_count": 3,
         "unit": "minutes"
     },
     "entry_pricing": {
@@ -50,7 +50,7 @@
     "pairlists": [
         {
             "method": "VolumePairList",
-            "number_assets": 40,
+            "number_assets": 60,
             "sort_key": "quoteVolume",
             "min_value": 0,
             "refresh_period": 1800
@@ -83,7 +83,6 @@
         "CORS_origins": [
             "https://d62c42a7-4dff-435f-839b-7ebf001afe9a.lovableproject.com",
             "https://id-preview--d62c42a7-4dff-435f-839b-7ebf001afe9a.lovable.app",
-            "https://kindness-stream-flap.ngrok-free.app",
             "https://freqtrade-xrp-production.up.railway.app",
             "https://preview--d62c42a7-4dff-435f-839b-7ebf001afe9a.lovable.app"
         ],
