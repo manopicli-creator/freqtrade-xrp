@@ -1,5 +1,7 @@
 from freqtrade.strategy import IStrategy, IntParameter
 from pandas import DataFrame
+from datetime import datetime, timezone
+from typing import Optional
 import talib.abstract as ta
 import pandas as pd
 
@@ -8,20 +10,28 @@ class XRPStrategy(IStrategy):
     timeframe = '15m'
     startup_candle_count = 800
 
-    stoploss = -0.05
+    # --- Stoploss dur réduit ---
+    stoploss = -0.04
+
+    # --- Trailing stop : laisse courir les gains ---
+    trailing_stop = True
+    trailing_stop_positive = 0.01        # active le trailing dès +1%
+    trailing_stop_positive_offset = 0.02 # commence à trailing depuis +2%
+    trailing_only_offset_is_reached = True
+
+    # --- ROI minimal : on laisse le trailing gérer la sortie ---
     minimal_roi = {
-        "0": 0.03,
-        "60": 0.02,
-        "120": 0.01,
-        "240": 0,
-        "480": -0.02
+        "0": 0.10,    # ne sort sur ROI fixe qu'à +10% (très rare, filet de sécurité)
+        "480": 0.05,  # après 8h, sort à +5%
+        "960": 0.02,  # après 16h, sort à +2%
+        "1440": 0     # après 24h, sort à 0% (pas de trade zombie)
     }
 
-    trailing_stop = False
     use_exit_signal = True
     exit_profit_only = False
     can_short = False
 
+    # --- Paramètres hyperopt ---
     buy_rsi_min = IntParameter(30, 50, default=35, space='buy')
     buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
     buy_adx_min = IntParameter(10, 30, default=20, space='buy')
@@ -34,9 +44,9 @@ class XRPStrategy(IStrategy):
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe['ema200'] = ta.EMA(dataframe, timeperiod=200)
-        dataframe['ema200_1h'] = ta.EMA(dataframe, timeperiod=800)
         dataframe['adx'] = ta.ADX(dataframe, timeperiod=14)
 
+        # --- Indicateurs 5m ---
         inf5 = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='5m')
         inf5['rsi'] = ta.RSI(inf5, timeperiod=14)
         inf5['ema20'] = ta.EMA(inf5, timeperiod=20)
@@ -67,6 +77,7 @@ class XRPStrategy(IStrategy):
         inf5_15 = inf5_15.groupby('date').last().reset_index()
         dataframe = dataframe.merge(inf5_15, on='date', how='left')
 
+        # --- Indicateurs 1h ---
         inf1h = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='1h')
         if len(inf1h) > 0:
             inf1h['ema20_1h'] = ta.EMA(inf1h, timeperiod=20)
@@ -102,6 +113,7 @@ class XRPStrategy(IStrategy):
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        # Signal de sortie sur retournement de tendance 1h
         dataframe.loc[
             (
                 (dataframe['rsi_1h'] < 40) &
@@ -109,3 +121,22 @@ class XRPStrategy(IStrategy):
             ),
             'exit_long'] = 1
         return dataframe
+
+    def custom_exit(self, pair: str, trade, current_time: datetime,
+                    current_rate: float, current_profit: float, **kwargs) -> Optional[str]:
+        """
+        Sortie personnalisée : coupe les trades négatifs après 4h.
+        Si après 4h le trade est toujours en perte, on sort pour éviter
+        les trades zombies qui bloquent un slot sans jamais décoller.
+        """
+        trade_duration_hours = (current_time - trade.open_date_utc).total_seconds() / 3600
+
+        # Après 4h en négatif : sortie forcée
+        if trade_duration_hours >= 4 and current_profit < -0.01:
+            return "exit_4h_negative"
+
+        # Après 8h toujours en négatif : sortie urgente
+        if trade_duration_hours >= 8 and current_profit < 0:
+            return "exit_8h_negative"
+
+        return None
