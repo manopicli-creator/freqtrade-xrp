@@ -17,7 +17,7 @@ class XRPStrategy(IStrategy):
     trailing_stop_positive_offset = 0.02
     trailing_only_offset_is_reached = True
 
-    use_custom_stoploss = True
+    use_custom_stoploss = False  # désactivé — conflit avec trailing
 
     minimal_roi = {
         "0": 0.10,
@@ -113,41 +113,17 @@ class XRPStrategy(IStrategy):
             'exit_long'] = 1
         return dataframe
 
-    def custom_stoploss(self, pair: str, trade, current_time: datetime,
-                        current_rate: float, current_profit: float,
-                        after_fill: bool, **kwargs) -> Optional[float]:
-        hours = (current_time - trade.open_date_utc).total_seconds() / 3600
-
-        # Si en profit > 2% : laisse le trailing gérer
-        if current_profit > 0.02:
-            return None
-
-        if hours >= 3:
-            return -0.01   # après 3h : coupe à -1%
-        elif hours >= 2:
-            return -0.02   # après 2h : coupe à -2%
-        elif hours >= 1:
-            return -0.03   # après 1h : coupe à -3%
-
-        return None
-
     def custom_stake_amount(self, current_time: datetime, current_rate: float,
                             proposed_stake: float, min_stake: Optional[float],
                             max_stake: float, leverage: float, entry_tag: Optional[str],
                             side: str, pair: str, **kwargs) -> float:
-        """
-        Stake dynamique selon la force du signal :
-        - Signal faible (score 0-1) : 10% du capital dispo
-        - Signal moyen (score 2-3)  : 15% du capital dispo
-        - Signal fort  (score 4)    : 20% du capital dispo
-        """
         try:
             dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
             if len(dataframe) == 0:
                 return proposed_stake
             score = int(dataframe.iloc[-1]['signal_score'])
         except Exception:
-            return proposed_stake  # fallback safe
+            return proposed_stake
 
         if score >= 4:
             pct = 1.20   # signal fort  → ~300 USDT
@@ -168,6 +144,17 @@ class XRPStrategy(IStrategy):
     def custom_exit(self, pair: str, trade, current_time: datetime,
                     current_rate: float, current_profit: float, **kwargs) -> Optional[str]:
         hours = (current_time - trade.open_date_utc).total_seconds() / 3600
-        if hours >= 8 and current_profit < 0:
-            return "exit_8h_negative"
+
+        # Après 1h en perte > -1% → sortie
+        if hours >= 1 and current_profit < -0.01:
+            return "exit_1h_neg1pct"
+
+        # Après 2h en perte > -0.5% → sortie
+        if hours >= 2 and current_profit < -0.005:
+            return "exit_2h_neg05pct"
+
+        # Après 3h en négatif → sortie quoi qu'il arrive
+        if hours >= 3 and current_profit < 0:
+            return "exit_3h_negative"
+
         return None
