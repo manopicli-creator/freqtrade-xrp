@@ -43,12 +43,10 @@ class XRPStrategy(IStrategy):
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe['adx'] = ta.ADX(dataframe, timeperiod=14)
 
-        # Score de force du signal
         dataframe['signal_score'] = 0
         dataframe.loc[dataframe['adx'] > 20, 'signal_score'] += 1
         dataframe.loc[dataframe['adx'] > 30, 'signal_score'] += 1
 
-        # Indicateurs 5m
         inf5 = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='5m')
         inf5['rsi'] = ta.RSI(inf5, timeperiod=14)
         inf5['ema20'] = ta.EMA(inf5, timeperiod=20)
@@ -67,7 +65,6 @@ class XRPStrategy(IStrategy):
         inf5_15 = inf5_15.groupby('date').last().reset_index()
         dataframe = dataframe.merge(inf5_15, on='date', how='left')
 
-        # Score RSI et EMA
         dataframe.loc[
             (dataframe['5m_rsi'] > 45) & (dataframe['5m_rsi'] < 60),
             'signal_score'
@@ -77,7 +74,6 @@ class XRPStrategy(IStrategy):
             'signal_score'
         ] += 1
 
-        # Indicateurs 1h
         inf1h = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='1h')
         if len(inf1h) > 0:
             inf1h['ema20_1h'] = ta.EMA(inf1h, timeperiod=20)
@@ -122,15 +118,16 @@ class XRPStrategy(IStrategy):
                         after_fill: bool, **kwargs) -> Optional[float]:
         hours = (current_time - trade.open_date_utc).total_seconds() / 3600
 
+        # Si en profit > 2% : laisse le trailing gérer
         if current_profit > 0.02:
-            return None  # laisse le trailing gérer
+            return None
 
         if hours >= 3:
-            return -0.01
+            return -0.01   # après 3h : coupe à -1%
         elif hours >= 2:
-            return -0.02
+            return -0.02   # après 2h : coupe à -2%
         elif hours >= 1:
-            return -0.03
+            return -0.03   # après 1h : coupe à -3%
 
         return None
 
@@ -140,28 +137,26 @@ class XRPStrategy(IStrategy):
                             side: str, pair: str, **kwargs) -> float:
         """
         Stake dynamique selon la force du signal :
-        - Signal faible (score 0-1) : 15% du capital dispo
-        - Signal moyen (score 2-3)  : 25% du capital dispo
-        - Signal fort  (score 4)    : 35% du capital dispo
+        - Signal faible (score 0-1) : 10% du capital dispo
+        - Signal moyen (score 2-3)  : 15% du capital dispo
+        - Signal fort  (score 4)    : 20% du capital dispo
         """
         try:
             dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
             if len(dataframe) == 0:
                 return proposed_stake
-
             score = int(dataframe.iloc[-1]['signal_score'])
         except Exception:
             return proposed_stake  # fallback safe
 
-        # Capital dispo reconstitué depuis max_stake
-        available = max_stake / 0.35
+        available = max_stake / 0.20  # reconstitue le capital dispo
 
         if score >= 4:
-            pct = 0.35
+            pct = 0.20
         elif score >= 2:
-            pct = 0.25
-        else:
             pct = 0.15
+        else:
+            pct = 0.10
 
         stake = available * pct
 
@@ -178,4 +173,3 @@ class XRPStrategy(IStrategy):
         if hours >= 8 and current_profit < 0:
             return "exit_8h_negative"
         return None
-                        
