@@ -149,16 +149,14 @@ class XRPStrategy(IStrategy):
         except Exception:
             return proposed_stake  # fallback safe
 
-        available = max_stake / 0.20  # reconstitue le capital dispo
-
         if score >= 4:
-            pct = 0.20
+            pct = 1.20   # signal fort  → ~300 USDT
         elif score >= 2:
-            pct = 0.15
+            pct = 1.00   # signal moyen → ~250 USDT
         else:
-            pct = 0.10
+            pct = 0.80   # signal faible → ~200 USDT
 
-        stake = available * pct
+        stake = proposed_stake * pct
 
         if min_stake and stake < min_stake:
             stake = min_stake
