@@ -63,11 +63,11 @@ def get_mode_params(level):
             "stoploss": -0.05,
             "roi": roi
         }
-    else:
+    else:  # > 80, Bull — seuils assouplis pour marché en range
         return {
-            "adx": 15,
-            "rsi_min": 35,
-            "rsi_max": 65,
+            "adx": 10,      # était 15 → trop strict en range
+            "rsi_min": 30,  # était 35
+            "rsi_max": 70,  # était 65
             "stoploss": -0.06,
             "roi": roi
         }
