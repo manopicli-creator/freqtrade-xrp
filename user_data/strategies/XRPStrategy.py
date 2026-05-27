@@ -34,11 +34,10 @@ class XRPStrategy(IStrategy):
     buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
     buy_adx_min = IntParameter(10, 30, default=10, space='buy')
 
-    # Slider 1–100 → contrôle le seuil minimum de signal_score pour entrer
-    # Slider 0–33  → score >= 3 (très sélectif, peu de trades)
-    # Slider 34–66 → score >= 2 (modéré)
+    # Slider 1–33  → score >= 3  (sélectif, peu de trades, meilleure qualité)
+    # Slider 34–66 → score >= 2  (modéré)
     # Slider 67–100 → score >= 1 (agressif, beaucoup de trades)
-    buy_score_threshold = IntParameter(1, 100, default=50, space='buy', load=True)
+    buy_score_threshold = IntParameter(1, 100, default=20, space='buy', load=True)
 
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
