@@ -34,6 +34,12 @@ class XRPStrategy(IStrategy):
     buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
     buy_adx_min = IntParameter(10, 30, default=10, space='buy')
 
+    # Slider 1–100 → contrôle le seuil minimum de signal_score pour entrer
+    # Slider 0–33  → score >= 3 (très sélectif, peu de trades)
+    # Slider 34–66 → score >= 2 (modéré)
+    # Slider 67–100 → score >= 1 (agressif, beaucoup de trades)
+    buy_score_threshold = IntParameter(1, 100, default=50, space='buy', load=True)
+
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
         informative = [(pair, '5m') for pair in pairs]
@@ -78,22 +84,48 @@ class XRPStrategy(IStrategy):
         if len(inf1h) > 0:
             inf1h['ema20_1h'] = ta.EMA(inf1h, timeperiod=20)
             inf1h['ema50_1h'] = ta.EMA(inf1h, timeperiod=50)
+            inf1h['ema200_1h'] = ta.EMA(inf1h, timeperiod=200)
             inf1h['rsi_1h'] = ta.RSI(inf1h, timeperiod=14)
             inf1h['date'] = pd.to_datetime(inf1h['date'])
-            inf1h_15 = inf1h[['date', 'ema20_1h', 'ema50_1h', 'rsi_1h']].copy()
+            inf1h_15 = inf1h[['date', 'ema20_1h', 'ema50_1h', 'ema200_1h', 'rsi_1h']].copy()
             inf1h_15['date'] = inf1h_15['date'].dt.floor('15min')
             dataframe = dataframe.merge(inf1h_15, on='date', how='left')
         else:
             dataframe['ema20_1h'] = float('nan')
             dataframe['ema50_1h'] = float('nan')
+            dataframe['ema200_1h'] = float('nan')
             dataframe['rsi_1h'] = float('nan')
 
         dataframe.ffill(inplace=True)
         return dataframe
 
+    def _score_threshold_from_slider(self) -> int:
+        """
+        Convertit le slider (1–100) en seuil de signal_score minimum :
+          Slider 1–33  → score >= 3  (sélectif)
+          Slider 34–66 → score >= 2  (modéré)
+          Slider 67–100 → score >= 1 (agressif)
+        """
+        v = self.buy_score_threshold.value
+        if v <= 33:
+            return 3
+        elif v <= 66:
+            return 2
+        else:
+            return 1
+
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        min_score = self._score_threshold_from_slider()
+
         dataframe.loc[
             (
+                # ── Filtre tendance 1h : on n'entre qu'en tendance haussière ──
+                (dataframe['close'] > dataframe['ema200_1h']) &
+
+                # ── Filtre score signal : qualité minimale selon slider ──
+                (dataframe['signal_score'] >= min_score) &
+
+                # ── Conditions techniques de base ──
                 (dataframe['adx'] > self.buy_adx_min.value) &
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
