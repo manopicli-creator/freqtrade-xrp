@@ -17,7 +17,7 @@ class XRPStrategy(IStrategy):
     trailing_stop_positive_offset = 0.02
     trailing_only_offset_is_reached = True
 
-    use_custom_stoploss = False  # désactivé — conflit avec trailing
+    use_custom_stoploss = False
 
     minimal_roi = {
         "0": 0.10,
@@ -34,18 +34,12 @@ class XRPStrategy(IStrategy):
     buy_rsi_max = IntParameter(50, 70, default=65, space='buy')
     buy_adx_min = IntParameter(10, 30, default=10, space='buy')
 
-    # Slider 1–33  → score >= 3  (sélectif, peu de trades, meilleure qualité)
+    # Slider 1–33  → score >= 3  (sélectif)
     # Slider 34–66 → score >= 2  (modéré)
-    # Slider 67–100 → score >= 1 (agressif, beaucoup de trades)
+    # Slider 67–100 → score >= 1 (agressif)
     buy_score_threshold = IntParameter(1, 100, default=20, space='buy', load=True)
 
-    # ── CIRCUIT BREAKER ──────────────────────────────────────────────────────
-    # Stoppe les nouvelles entrées si le wallet perd plus de X% sur la journée.
-    # Mettre à 0 pour désactiver.
-    daily_drawdown_limit = -0.03  # -3% → ajuste selon ton appétit au risque
-
-    # ── COOLDOWN PAR PAIRE ───────────────────────────────────────────────────
-    # Après un stop_loss sur une paire, interdit les entrées pendant N heures.
+    daily_drawdown_limit = -0.03
     pair_cooldown_hours = 4
 
     def informative_pairs(self):
@@ -116,23 +110,13 @@ class XRPStrategy(IStrategy):
         else:
             return 1
 
-    # ── CIRCUIT BREAKER : drawdown journalier ────────────────────────────────
     def _is_circuit_breaker_active(self, current_time: datetime) -> bool:
-        """
-        Retourne True si le wallet a perdu plus de daily_drawdown_limit
-        depuis minuit UTC. Dans ce cas, on bloque toutes les nouvelles entrées.
-        Les trades ouverts continuent normalement.
-        """
         if self.daily_drawdown_limit >= 0:
             return False
         try:
+            from freqtrade.persistence import Trade
             start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
-            trades = self.wallets.get_trade_stake_amount  # juste un check de disponibilité
-            open_trades = Trade.get_trades_proxy(is_open=True)
-            closed_today = Trade.get_trades_proxy(
-                is_open=False,
-                open_date=start_of_day
-            )
+            closed_today = Trade.get_trades_proxy(is_open=False, open_date=start_of_day)
             daily_pnl = sum(t.close_profit_abs for t in closed_today if t.close_profit_abs)
             current_balance = self.wallets.get_free('USDT') + self.wallets.get_used('USDT')
             if current_balance <= 0:
@@ -142,15 +126,11 @@ class XRPStrategy(IStrategy):
         except Exception:
             return False
 
-    # ── COOLDOWN PAR PAIRE : après stop_loss ─────────────────────────────────
     def _is_pair_in_cooldown(self, pair: str, current_time: datetime) -> bool:
-        """
-        Retourne True si la paire a subi un stop_loss dans les dernières
-        pair_cooldown_hours heures.
-        """
         if self.pair_cooldown_hours <= 0:
             return False
         try:
+            from freqtrade.persistence import Trade
             cutoff = current_time - timedelta(hours=self.pair_cooldown_hours)
             recent_trades = Trade.get_trades_proxy(is_open=False, pair=pair)
             for t in recent_trades:
@@ -161,13 +141,9 @@ class XRPStrategy(IStrategy):
             pass
         return False
 
-    # ── RE-ENTRY PRIORITAIRE : après trailing stop positif ───────────────────
     def _had_recent_trailing_stop(self, pair: str, current_time: datetime) -> bool:
-        """
-        Retourne True si la paire a eu un trailing_stop_loss positif
-        dans les 2 dernières heures → signal de force, on abaisse le seuil.
-        """
         try:
+            from freqtrade.persistence import Trade
             cutoff = current_time - timedelta(hours=2)
             recent_trades = Trade.get_trades_proxy(is_open=False, pair=pair)
             for t in recent_trades:
@@ -183,18 +159,16 @@ class XRPStrategy(IStrategy):
 
         dataframe.loc[
             (
-                # ── 1. Filtre tendance 1h ──────────────────────────────────
+                # 1. Filtre tendance 1h
                 (dataframe['close'] > dataframe['ema200_1h']) &
 
-                # ── 2. Bougie verte obligatoire ───────────────────────────
-                # Évite d'entrer sur un signal haussier alors que la bougie
-                # en cours est déjà baissière (close < open).
+                # 2. Bougie verte obligatoire
                 (dataframe['close'] > dataframe['open']) &
 
-                # ── 3. Score signal selon slider ──────────────────────────
+                # 3. Score signal selon slider
                 (dataframe['signal_score'] >= min_score) &
 
-                # ── 4. Conditions techniques de base ──────────────────────
+                # 4. Conditions techniques de base
                 (dataframe['adx'] > self.buy_adx_min.value) &
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
@@ -208,25 +182,10 @@ class XRPStrategy(IStrategy):
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float,
                             rate: float, time_in_force: str, current_time: datetime,
                             entry_tag: Optional[str], side: str, **kwargs) -> bool:
-        """
-        Vérifications runtime à la clôture de chaque bougie :
-          - Circuit breaker journalier
-          - Cooldown par paire après stop_loss
-          - Re-entry prioritaire après trailing stop positif (abaisse le seuil)
-        """
-        # Circuit breaker — bloque toutes les nouvelles entrées
         if self._is_circuit_breaker_active(current_time):
             return False
-
-        # Cooldown — bloque cette paire spécifiquement
         if self._is_pair_in_cooldown(pair, current_time):
             return False
-
-        # Re-entry prioritaire — si la paire vient d'un trailing stop positif,
-        # on autorise même avec un score plus faible (on ne re-bloque pas ici,
-        # le signal a déjà passé populate_entry_trend ; on confirme toujours).
-        # Le boost de score est géré en custom_stake_amount ci-dessous.
-
         return True
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -257,10 +216,8 @@ class XRPStrategy(IStrategy):
         else:
             pct = 0.80
 
-        # Re-entry prioritaire : boost de mise si la paire vient d'un
-        # trailing stop positif dans les 2 dernières heures.
         if self._had_recent_trailing_stop(pair, current_time):
-            pct = min(pct * 1.25, 1.50)  # +25% de mise, plafonné à 150%
+            pct = min(pct * 1.25, 1.50)
 
         stake = proposed_stake * pct
 
@@ -285,12 +242,3 @@ class XRPStrategy(IStrategy):
             return "exit_3h_negative"
 
         return None
-
-
-# ── Import Trade nécessaire pour les méthodes runtime ───────────────────────
-# Freqtrade l'injecte dans le scope au runtime ; cet import évite les erreurs
-# de linter sans impacter l'exécution réelle.
-try:
-    from freqtrade.persistence import Trade
-except ImportError:
-    pass
