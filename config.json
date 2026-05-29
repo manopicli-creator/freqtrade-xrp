@@ -80,12 +80,7 @@
         "verbosity": "error",
         "enable_openapi": false,
         "jwt_secret_key": "xrpstrategy2026_freqtrade_secure_key_railway",
-        "CORS_origins": [
-            "https://d62c42a7-4dff-435f-839b-7ebf001afe9a.lovableproject.com",
-            "https://id-preview--d62c42a7-4dff-435f-839b-7ebf001afe9a.lovable.app",
-            "https://freqtrade-xrp-production.up.railway.app",
-            "https://preview--d62c42a7-4dff-435f-839b-7ebf001afe9a.lovable.app"
-        ],
+        "CORS_origins": ["*"],
         "username": "mano",
         "password": "Freqtrade2026"
     },
