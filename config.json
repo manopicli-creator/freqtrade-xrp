@@ -80,6 +80,7 @@
         "verbosity": "error",
         "enable_openapi": false,
         "jwt_secret_key": "xrpstrategy2026_freqtrade_secure_key_railway",
+        "ws_token": "xrpstrategy2026_ws_token_fixed",
         "CORS_origins": ["*"],
         "allowed_origins": ["*"],
         "username": "mano",
