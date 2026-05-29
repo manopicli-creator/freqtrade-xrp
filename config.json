@@ -29,7 +29,7 @@
     },
     "download_trades": false,
     "exchange": {
-        "name": "bybit",
+        "name": "kucoin",
         "pair_whitelist": [],
         "pair_blacklist": [
             "USDC/USDT",
