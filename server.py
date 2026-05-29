@@ -40,10 +40,12 @@ def get_jwt_token():
     return None
 
 def get_auth_headers():
-    token = get_jwt_token()
+    token = get_jwt_token_direct()
     headers = {
         "X-Forwarded-For": "127.0.0.1",
         "X-Real-IP": "127.0.0.1",
+        "Host": "localhost:8081",
+        "Origin": "http://localhost:8081",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -51,6 +53,33 @@ def get_auth_headers():
         credentials = base64.b64encode(f"{FT_USERNAME}:{FT_PASSWORD}".encode()).decode()
         headers["Authorization"] = f"Basic {credentials}"
     return headers
+
+
+def get_jwt_token_direct():
+    """Get JWT by calling Freqtrade login endpoint with localhost headers."""
+    global _jwt_token, _jwt_expiry
+    if _jwt_token and time.time() < _jwt_expiry:
+        return _jwt_token
+    try:
+        resp = requests.post(
+            f"{FREQTRADE_URL}/api/v1/token/login",
+            json={"username": FT_USERNAME, "password": FT_PASSWORD},
+            headers={
+                "X-Forwarded-For": "127.0.0.1",
+                "X-Real-IP": "127.0.0.1",
+                "Host": "localhost:8081",
+                "Content-Type": "application/json",
+            },
+            timeout=10
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            _jwt_token = data.get("access_token")
+            _jwt_expiry = time.time() + 250
+            return _jwt_token
+    except Exception:
+        pass
+    return None
 
 def get_mode_params(level):
     roi = {
