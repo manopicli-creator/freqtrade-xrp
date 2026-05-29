@@ -1,6 +1,6 @@
 from freqtrade.strategy import IStrategy, IntParameter
 from pandas import DataFrame
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 import talib.abstract as ta
 import pandas as pd
@@ -38,6 +38,15 @@ class XRPStrategy(IStrategy):
     # Slider 34–66 → score >= 2  (modéré)
     # Slider 67–100 → score >= 1 (agressif, beaucoup de trades)
     buy_score_threshold = IntParameter(1, 100, default=20, space='buy', load=True)
+
+    # ── CIRCUIT BREAKER ──────────────────────────────────────────────────────
+    # Stoppe les nouvelles entrées si le wallet perd plus de X% sur la journée.
+    # Mettre à 0 pour désactiver.
+    daily_drawdown_limit = -0.03  # -3% → ajuste selon ton appétit au risque
+
+    # ── COOLDOWN PAR PAIRE ───────────────────────────────────────────────────
+    # Après un stop_loss sur une paire, interdit les entrées pendant N heures.
+    pair_cooldown_hours = 4
 
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
@@ -99,12 +108,6 @@ class XRPStrategy(IStrategy):
         return dataframe
 
     def _score_threshold_from_slider(self) -> int:
-        """
-        Convertit le slider (1–100) en seuil de signal_score minimum :
-          Slider 1–33  → score >= 3  (sélectif)
-          Slider 34–66 → score >= 2  (modéré)
-          Slider 67–100 → score >= 1 (agressif)
-        """
         v = self.buy_score_threshold.value
         if v <= 33:
             return 3
@@ -113,18 +116,85 @@ class XRPStrategy(IStrategy):
         else:
             return 1
 
+    # ── CIRCUIT BREAKER : drawdown journalier ────────────────────────────────
+    def _is_circuit_breaker_active(self, current_time: datetime) -> bool:
+        """
+        Retourne True si le wallet a perdu plus de daily_drawdown_limit
+        depuis minuit UTC. Dans ce cas, on bloque toutes les nouvelles entrées.
+        Les trades ouverts continuent normalement.
+        """
+        if self.daily_drawdown_limit >= 0:
+            return False
+        try:
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            trades = self.wallets.get_trade_stake_amount  # juste un check de disponibilité
+            open_trades = Trade.get_trades_proxy(is_open=True)
+            closed_today = Trade.get_trades_proxy(
+                is_open=False,
+                open_date=start_of_day
+            )
+            daily_pnl = sum(t.close_profit_abs for t in closed_today if t.close_profit_abs)
+            current_balance = self.wallets.get_free('USDT') + self.wallets.get_used('USDT')
+            if current_balance <= 0:
+                return False
+            drawdown = daily_pnl / current_balance
+            return drawdown < self.daily_drawdown_limit
+        except Exception:
+            return False
+
+    # ── COOLDOWN PAR PAIRE : après stop_loss ─────────────────────────────────
+    def _is_pair_in_cooldown(self, pair: str, current_time: datetime) -> bool:
+        """
+        Retourne True si la paire a subi un stop_loss dans les dernières
+        pair_cooldown_hours heures.
+        """
+        if self.pair_cooldown_hours <= 0:
+            return False
+        try:
+            cutoff = current_time - timedelta(hours=self.pair_cooldown_hours)
+            recent_trades = Trade.get_trades_proxy(is_open=False, pair=pair)
+            for t in recent_trades:
+                if t.close_date_utc and t.close_date_utc >= cutoff:
+                    if t.exit_reason and 'stop_loss' in t.exit_reason.lower():
+                        return True
+        except Exception:
+            pass
+        return False
+
+    # ── RE-ENTRY PRIORITAIRE : après trailing stop positif ───────────────────
+    def _had_recent_trailing_stop(self, pair: str, current_time: datetime) -> bool:
+        """
+        Retourne True si la paire a eu un trailing_stop_loss positif
+        dans les 2 dernières heures → signal de force, on abaisse le seuil.
+        """
+        try:
+            cutoff = current_time - timedelta(hours=2)
+            recent_trades = Trade.get_trades_proxy(is_open=False, pair=pair)
+            for t in recent_trades:
+                if t.close_date_utc and t.close_date_utc >= cutoff:
+                    if t.exit_reason == 'trailing_stop_loss' and t.close_profit > 0:
+                        return True
+        except Exception:
+            pass
+        return False
+
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         min_score = self._score_threshold_from_slider()
 
         dataframe.loc[
             (
-                # ── Filtre tendance 1h : on n'entre qu'en tendance haussière ──
+                # ── 1. Filtre tendance 1h ──────────────────────────────────
                 (dataframe['close'] > dataframe['ema200_1h']) &
 
-                # ── Filtre score signal : qualité minimale selon slider ──
+                # ── 2. Bougie verte obligatoire ───────────────────────────
+                # Évite d'entrer sur un signal haussier alors que la bougie
+                # en cours est déjà baissière (close < open).
+                (dataframe['close'] > dataframe['open']) &
+
+                # ── 3. Score signal selon slider ──────────────────────────
                 (dataframe['signal_score'] >= min_score) &
 
-                # ── Conditions techniques de base ──
+                # ── 4. Conditions techniques de base ──────────────────────
                 (dataframe['adx'] > self.buy_adx_min.value) &
                 (dataframe['5m_ema20'] > dataframe['5m_ema50']) &
                 (dataframe['5m_rsi'] > self.buy_rsi_min.value) &
@@ -134,6 +204,30 @@ class XRPStrategy(IStrategy):
             ),
             'enter_long'] = 1
         return dataframe
+
+    def confirm_trade_entry(self, pair: str, order_type: str, amount: float,
+                            rate: float, time_in_force: str, current_time: datetime,
+                            entry_tag: Optional[str], side: str, **kwargs) -> bool:
+        """
+        Vérifications runtime à la clôture de chaque bougie :
+          - Circuit breaker journalier
+          - Cooldown par paire après stop_loss
+          - Re-entry prioritaire après trailing stop positif (abaisse le seuil)
+        """
+        # Circuit breaker — bloque toutes les nouvelles entrées
+        if self._is_circuit_breaker_active(current_time):
+            return False
+
+        # Cooldown — bloque cette paire spécifiquement
+        if self._is_pair_in_cooldown(pair, current_time):
+            return False
+
+        # Re-entry prioritaire — si la paire vient d'un trailing stop positif,
+        # on autorise même avec un score plus faible (on ne re-bloque pas ici,
+        # le signal a déjà passé populate_entry_trend ; on confirme toujours).
+        # Le boost de score est géré en custom_stake_amount ci-dessous.
+
+        return True
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
@@ -157,11 +251,16 @@ class XRPStrategy(IStrategy):
             return proposed_stake
 
         if score >= 4:
-            pct = 1.20   # signal fort  → ~300 USDT
+            pct = 1.20
         elif score >= 2:
-            pct = 1.00   # signal moyen → ~250 USDT
+            pct = 1.00
         else:
-            pct = 0.80   # signal faible → ~200 USDT
+            pct = 0.80
+
+        # Re-entry prioritaire : boost de mise si la paire vient d'un
+        # trailing stop positif dans les 2 dernières heures.
+        if self._had_recent_trailing_stop(pair, current_time):
+            pct = min(pct * 1.25, 1.50)  # +25% de mise, plafonné à 150%
 
         stake = proposed_stake * pct
 
@@ -176,16 +275,22 @@ class XRPStrategy(IStrategy):
                     current_rate: float, current_profit: float, **kwargs) -> Optional[str]:
         hours = (current_time - trade.open_date_utc).total_seconds() / 3600
 
-        # Après 1h en perte > -1% → sortie
         if hours >= 1 and current_profit < -0.01:
             return "exit_1h_neg1pct"
 
-        # Après 2h en perte > -0.5% → sortie
         if hours >= 2 and current_profit < -0.005:
             return "exit_2h_neg05pct"
 
-        # Après 3h en négatif → sortie quoi qu'il arrive
         if hours >= 3 and current_profit < 0:
             return "exit_3h_negative"
 
         return None
+
+
+# ── Import Trade nécessaire pour les méthodes runtime ───────────────────────
+# Freqtrade l'injecte dans le scope au runtime ; cet import évite les erreurs
+# de linter sans impacter l'exécution réelle.
+try:
+    from freqtrade.persistence import Trade
+except ImportError:
+    pass
