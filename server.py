@@ -41,10 +41,16 @@ def get_jwt_token():
 
 def get_auth_headers():
     token = get_jwt_token()
+    headers = {
+        "X-Forwarded-For": "127.0.0.1",
+        "X-Real-IP": "127.0.0.1",
+    }
     if token:
-        return {"Authorization": f"Bearer {token}"}
-    credentials = base64.b64encode(f"{FT_USERNAME}:{FT_PASSWORD}".encode()).decode()
-    return {"Authorization": f"Basic {credentials}"}
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        credentials = base64.b64encode(f"{FT_USERNAME}:{FT_PASSWORD}".encode()).decode()
+        headers["Authorization"] = f"Basic {credentials}"
+    return headers
 
 def get_mode_params(level):
     roi = {
