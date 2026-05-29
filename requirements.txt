@@ -1,4 +1,3 @@
-freqtrade
 flask
 flask-cors
 requests
