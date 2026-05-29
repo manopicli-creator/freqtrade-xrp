@@ -31,10 +31,10 @@
     "exchange": {
         "name": "bybit",
         "ccxt_config": {
-            "aiohttp_proxy": "http://wiutrsmr:nja9w73zrdk1@38.154.203.95:5863"
+            "httpsProxy": "http://wiutrsmr:nja9w73zrdk1@38.154.203.95:5863"
         },
         "ccxt_async_config": {
-            "aiohttp_proxy": "http://wiutrsmr:nja9w73zrdk1@38.154.203.95:5863"
+            "httpsProxy": "http://wiutrsmr:nja9w73zrdk1@38.154.203.95:5863"
         },
         "pair_whitelist": [],
         "pair_blacklist": [
