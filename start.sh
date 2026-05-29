@@ -22,21 +22,7 @@ find /app -name "*.sqlite" -delete 2>/dev/null
 find /app -name "*.sqlite-wal" -delete 2>/dev/null
 find /app -name "*.sqlite-shm" -delete 2>/dev/null
 echo "=== Starting Freqtrade ==="
-FREQTRADE__api_server__allowed_origins="*" \
 freqtrade trade \
   --strategy XRPStrategy \
   --config user_data/config.json \
-  --logfile user_data/logs/freqtrade.log &
-FTPID=$!
-echo "Freqtrade PID: $FTPID"
-echo "=== Waiting for Freqtrade to be ready ==="
-for i in $(seq 1 60); do
-    if python3 -c "import requests; requests.get('http://localhost:8081/api/v1/ping', timeout=2)" 2>/dev/null; then
-        echo "Freqtrade ready after ${i} attempts!"
-        break
-    fi
-    echo "Attempt $i/30 - waiting..."
-    sleep 3
-done
-echo "=== Starting Flask ==="
-python server.py
+  --logfile user_data/logs/freqtrade.log
