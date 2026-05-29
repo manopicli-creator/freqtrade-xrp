@@ -17,60 +17,52 @@ FREQTRADE_URL = os.environ.get('FREQTRADE_URL', 'http://localhost:8081')
 FT_USERNAME = "mano"
 FT_PASSWORD = "Freqtrade2026"
 
+_jwt_token = None
+_jwt_expiry = 0
+
+def get_jwt_token():
+    global _jwt_token, _jwt_expiry
+    if _jwt_token and time.time() < _jwt_expiry:
+        return _jwt_token
+    try:
+        resp = requests.post(
+            f"{FREQTRADE_URL}/api/v1/token/login",
+            json={"username": FT_USERNAME, "password": FT_PASSWORD},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            _jwt_token = data.get("access_token")
+            _jwt_expiry = time.time() + 250
+            return _jwt_token
+    except Exception:
+        pass
+    return None
+
 def get_auth_headers():
+    token = get_jwt_token()
+    if token:
+        return {"Authorization": f"Bearer {token}"}
     credentials = base64.b64encode(f"{FT_USERNAME}:{FT_PASSWORD}".encode()).decode()
     return {"Authorization": f"Basic {credentials}"}
 
 def get_mode_params(level):
-    # ROI identique pour tous les modes : laisse le trailing stop gérer la sortie
-    # Le ROI ne sert que de filet de sécurité à très long terme
     roi = {
         "0": 0.10,
         "480": 0.05,
         "960": 0.02,
         "1440": 0
     }
-
     if level <= 20:
-        return {
-            "adx": 25,
-            "rsi_min": 48,
-            "rsi_max": 53,
-            "stoploss": -0.03,
-            "roi": roi
-        }
+        return {"adx": 25, "rsi_min": 48, "rsi_max": 53, "stoploss": -0.03, "roi": roi}
     elif level <= 40:
-        return {
-            "adx": 22,
-            "rsi_min": 44,
-            "rsi_max": 56,
-            "stoploss": -0.035,
-            "roi": roi
-        }
+        return {"adx": 22, "rsi_min": 44, "rsi_max": 56, "stoploss": -0.035, "roi": roi}
     elif level <= 60:
-        return {
-            "adx": 20,
-            "rsi_min": 40,
-            "rsi_max": 60,
-            "stoploss": -0.04,
-            "roi": roi
-        }
+        return {"adx": 20, "rsi_min": 40, "rsi_max": 60, "stoploss": -0.04, "roi": roi}
     elif level <= 80:
-        return {
-            "adx": 17,
-            "rsi_min": 37,
-            "rsi_max": 63,
-            "stoploss": -0.05,
-            "roi": roi
-        }
-    else:  # > 80, Bull — seuils assouplis pour marché en range
-        return {
-            "adx": 10,      # était 15 → trop strict en range
-            "rsi_min": 30,  # était 35
-            "rsi_max": 70,  # était 65
-            "stoploss": -0.06,
-            "roi": roi
-        }
+        return {"adx": 17, "rsi_min": 37, "rsi_max": 63, "stoploss": -0.05, "roi": roi}
+    else:
+        return {"adx": 10, "rsi_min": 30, "rsi_max": 70, "stoploss": -0.06, "roi": roi}
 
 @app.route('/')
 def index():
@@ -102,56 +94,36 @@ def debug_basic():
 @app.route('/public/profit')
 def public_profit():
     try:
-        resp = requests.get(
-            f"{FREQTRADE_URL}/api/v1/profit",
-            headers=get_auth_headers(),
-            timeout=10
-        )
+        resp = requests.get(f"{FREQTRADE_URL}/api/v1/profit", headers=get_auth_headers(), timeout=10)
         return Response(resp.content, status=resp.status_code,
-                       headers={'Content-Type': 'application/json',
-                                'Access-Control-Allow-Origin': '*'})
+                       headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
     except Exception as e:
         return jsonify({"error": str(e)})
 
 @app.route('/public/status')
 def public_status():
     try:
-        resp = requests.get(
-            f"{FREQTRADE_URL}/api/v1/status",
-            headers=get_auth_headers(),
-            timeout=10
-        )
+        resp = requests.get(f"{FREQTRADE_URL}/api/v1/status", headers=get_auth_headers(), timeout=10)
         return Response(resp.content, status=resp.status_code,
-                       headers={'Content-Type': 'application/json',
-                                'Access-Control-Allow-Origin': '*'})
+                       headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
     except Exception as e:
         return jsonify({"error": str(e)})
 
 @app.route('/public/trades')
 def public_trades():
     try:
-        resp = requests.get(
-            f"{FREQTRADE_URL}/api/v1/trades?limit=20",
-            headers=get_auth_headers(),
-            timeout=10
-        )
+        resp = requests.get(f"{FREQTRADE_URL}/api/v1/trades?limit=20", headers=get_auth_headers(), timeout=10)
         return Response(resp.content, status=resp.status_code,
-                       headers={'Content-Type': 'application/json',
-                                'Access-Control-Allow-Origin': '*'})
+                       headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
     except Exception as e:
         return jsonify({"error": str(e)})
 
 @app.route('/public/balance')
 def public_balance():
     try:
-        resp = requests.get(
-            f"{FREQTRADE_URL}/api/v1/balance",
-            headers=get_auth_headers(),
-            timeout=10
-        )
+        resp = requests.get(f"{FREQTRADE_URL}/api/v1/balance", headers=get_auth_headers(), timeout=10)
         return Response(resp.content, status=resp.status_code,
-                       headers={'Content-Type': 'application/json',
-                                'Access-Control-Allow-Origin': '*'})
+                       headers={'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'})
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -173,7 +145,6 @@ def set_mode():
         data = request.json
         level = int(data.get('level', 50))
         level = max(0, min(100, level))
-
         params = get_mode_params(level)
 
         if level <= 20:
@@ -199,18 +170,14 @@ def set_mode():
                     "buy_adx_min": params["adx"]
                 },
                 "roi": params["roi"],
-                "stoploss": {
-                    "stoploss": params["stoploss"]
-                },
+                "stoploss": {"stoploss": params["stoploss"]},
                 "trailing": {
                     "trailing_stop": True,
                     "trailing_stop_positive": 0.01,
                     "trailing_stop_positive_offset": 0.02,
                     "trailing_only_offset_is_reached": True
                 },
-                "max_open_trades": {
-                    "max_open_trades": 5
-                }
+                "max_open_trades": {"max_open_trades": 5}
             },
             "ft_stratparam_v": 1
         }
@@ -220,20 +187,11 @@ def set_mode():
             json.dump(strategy_params, f, indent=2)
 
         try:
-            requests.post(
-                f"{FREQTRADE_URL}/api/v1/reload_config",
-                headers=get_auth_headers(),
-                timeout=10
-            )
+            requests.post(f"{FREQTRADE_URL}/api/v1/reload_config", headers=get_auth_headers(), timeout=10)
         except Exception:
             pass
 
-        return jsonify({
-            "status": "success",
-            "level": level,
-            "label": label,
-            "params": params
-        })
+        return jsonify({"status": "success", "level": level, "label": label, "params": params})
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -274,24 +232,16 @@ def update_strategy():
     content = re.sub(r'"0": [\d.]+', f'"0": {roi}', content)
     content = re.sub(
         r'buy_rsi_min = IntParameter\(30, 50, default=\d+',
-        f'buy_rsi_min = IntParameter(30, 50, default={int(rsi_entry)}',
-        content
-    )
+        f'buy_rsi_min = IntParameter(30, 50, default={int(rsi_entry)}', content)
     content = re.sub(
         r'buy_rsi_max = IntParameter\(50, 70, default=\d+',
-        f'buy_rsi_max = IntParameter(50, 70, default={int(rsi_exit)}',
-        content
-    )
+        f'buy_rsi_max = IntParameter(50, 70, default={int(rsi_exit)}', content)
 
     with open(STRATEGY_FILE, 'w') as f:
         f.write(content)
 
     try:
-        requests.post(
-            f"{FREQTRADE_URL}/api/v1/reload_config",
-            headers=get_auth_headers(),
-            timeout=10
-        )
+        requests.post(f"{FREQTRADE_URL}/api/v1/reload_config", headers=get_auth_headers(), timeout=10)
     except Exception:
         pass
 
