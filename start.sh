@@ -22,6 +22,7 @@ find /app -name "*.sqlite" -delete 2>/dev/null
 find /app -name "*.sqlite-wal" -delete 2>/dev/null
 find /app -name "*.sqlite-shm" -delete 2>/dev/null
 echo "=== Starting Freqtrade ==="
+FREQTRADE__api_server__allowed_origins="*" \
 freqtrade trade \
   --strategy XRPStrategy \
   --config user_data/config.json \
