@@ -1,3 +1,1 @@
-flask
-flask-cors
-requests
+# no additional dependencies needed
